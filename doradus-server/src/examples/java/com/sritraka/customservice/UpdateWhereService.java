@@ -82,7 +82,6 @@ import com.dell.doradus.service.spider.SpiderService;
  * in doradus.yaml. Example:
  * <pre>
  *      default_services:
- *          - com.dell.doradus.mbeans.MBeanService
  *          ...
  *          <b>- com.sritraka.customservice.UpdateWhereService</b></pre>
  * Note that, although this sample service is functional, it is meant for demonstration

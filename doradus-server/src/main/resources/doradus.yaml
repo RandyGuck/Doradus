@@ -20,7 +20,6 @@ DoradusServer:
     dbesoptions_initialScalarBuffer: 30
     dbesoptions_linkBuffer: 1000
     default_services:
-        - com.dell.doradus.mbeans.MBeanService
         - com.dell.doradus.service.rest.RESTService
         - com.dell.doradus.service.taskmanager.TaskManagerService
     l2r_enable: true
