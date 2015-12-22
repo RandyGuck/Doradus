@@ -21,6 +21,7 @@ import com.dell.doradus.common.HttpMethod;
 import com.dell.doradus.common.TableDefinition;
 import com.dell.doradus.common.UNode;
 import com.dell.doradus.olap.OlapQuery;
+import com.dell.doradus.search.SearchResult;
 import com.dell.doradus.search.SearchResultList;
 import com.dell.doradus.service.olap.OLAPService;
 import com.dell.doradus.service.rest.UNodeOutCallback;
@@ -46,6 +47,9 @@ public class QueryURICmd extends UNodeOutCallback {
         String monoParams = OLAPMonoService.addMonoShard(params);
         OlapQuery olapQuery = new OlapQuery(monoParams);
         SearchResultList searchResult = OLAPService.instance().objectQuery(tableDef, olapQuery);
+        for (SearchResult result : searchResult.results) {
+            result.scalars.remove("_shard");
+        }
         return searchResult.toDoc();
     }   // invoke
 

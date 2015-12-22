@@ -72,7 +72,6 @@ public class ServerConfig {
     // Default database connection values:
     public static final String DEFAULT_DB_HOST = "localhost";
     public static final int DEFAULT_DB_PORT = 9160; // Thrift port, not jmx or gossip
-    public static final int DEFAULT_JMX_PORT = 7199; // JMX port, not thrift or gossip
     // Default keyspace parameters:
     public static final String  DEFAULT_KS_NAME = "Doradus";
     // Default values for miscellaneous Doradus server options:
@@ -218,7 +217,6 @@ public class ServerConfig {
     public List<String> dbtls_cipher_suites = new ArrayList<>();
     public String dbuser;
     public String dbpassword;
-    public int jmxport = DEFAULT_JMX_PORT;
     // Doradus keyspace properties
     public boolean multitenant_mode = false;
     public String keyspace = DEFAULT_KS_NAME;

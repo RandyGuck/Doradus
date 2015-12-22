@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.dell.doradus.server;
+package com.dell.doradus.service.rest;
+
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
@@ -30,26 +28,18 @@ import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
-import com.dell.doradus.service.rest.RESTService;
-import com.dell.doradus.service.rest.RESTService.RequestCallback;
-import com.dell.doradus.service.rest.WebServer;
-
 /**
  * JettyWebServer works a a WebServer plugin for Doradus. It can be run-time loaded and initialized during start-up time of Doradus server
  * See the settings (load_webserver and webserver_class) configured in doradus.yaml.
  * 
  */
-public class JettyWebServer extends WebServer{
+public class JettyWebServer extends WebServer {
 	
     private Server  m_jettyServer;
     private static final int SOCKET_TIMEOUT_MILLIS = 60 * 1000 * 5;  // 5 minutes
     
 	private static final JettyWebServer INSTANCE = new JettyWebServer();
 	   
-    // Although it is unlike new RequestCallbacks will be added after initialization, we use
-    // a ConcurrentLinkedQueue so we don't have to serialize onXxx requests.
-    private final Queue<RequestCallback> m_requestCallbacks = new ConcurrentLinkedQueue<>();
-    
     // Parameters:
     private final int       m_maxTaskQueue;
     private final int       m_maxconns;
@@ -87,24 +77,6 @@ public class JettyWebServer extends WebServer{
         }
     }
     
-    // Private Connection.Listener used to invoke connection opens and closes. Registered
-    // as an MBean with Jetty's Connector.
-    private class ConnListener implements Connection.Listener {
-        @Override
-        public void onOpened(Connection arg0) {
-            for (RequestCallback callback : m_requestCallbacks) {
-                callback.onConnectionOpened();
-            }
-        }
-        
-        @Override
-        public void onClosed(Connection arg0) {
-            for (RequestCallback callback : m_requestCallbacks) {
-                callback.onConnectionClosed();
-            }
-        }   // onClosed
-    }   // class ConnListener
-
     /**
      * Get the singleton instance of this service. The service may or may not have been
      * initialized yet.
@@ -150,7 +122,6 @@ public class JettyWebServer extends WebServer{
         } catch (Exception e) {
             m_logger.warn("Jetty stop failed", e);
         }
-        m_requestCallbacks.clear(); 
     }   // stopService
 
     // Create, configure, and return the Jetty Server object.
@@ -177,7 +148,6 @@ public class JettyWebServer extends WebServer{
         }
         connector.setPort(m_restport);
         connector.setIdleTimeout(SOCKET_TIMEOUT_MILLIS);
-        connector.addBean(new ConnListener());  // invokes registered callbacks, if any
         return connector;
     }   // configureConnector
     
@@ -208,37 +178,4 @@ public class JettyWebServer extends WebServer{
         return sslConnector;
     }   // createSSLConnector     
     
-
-	@Override
-	public void registerRequestCallback(RequestCallback callback) {
-		m_requestCallbacks.add(callback);		
-	}
-
-	@Override
-	public void notifyNewRequest() {
-        for (RequestCallback callback : m_requestCallbacks) {
-            callback.onNewRequest();
-        }		
-	}
-
-	@Override
-	public void notifyRequestSuccess(long startTimeNanos) {
-      for (RequestCallback callback : m_requestCallbacks) {
-            callback.onRequestSucceeded(startTimeNanos);
-        }		
-	}
-
-	@Override
-	public void notifyRequestRejected(String reason) {
-        for (RequestCallback callback : m_requestCallbacks) {
-            callback.onRequestRejected(reason);
-        }	
-	}
-
-	@Override
-	public void notifyRequestFailed(Throwable e) {
-        for (RequestCallback callback : m_requestCallbacks) {
-            callback.onRequestFailed(e);
-        }		
-	}
 }

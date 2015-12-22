@@ -28,6 +28,7 @@ DoradusServer:
         - com.dell.doradus.service.spider.SpiderService
         - com.dell.doradus.service.olap.OLAPService
         - com.dell.doradus.logservice.LoggingService
+        - com.dell.doradus.service.olap.mono.OLAPMonoService
 # Warning! Privilege commands require no authentication unless these are defined:        
 #    super_user: cassandra
 #    super_password: cassandra
@@ -113,7 +114,7 @@ RESTService:
         - TLS_ECDH_RSA_WITH_AES_256_CBC_SHA
     truststore: config/truststore
     truststorepassword: password
-    webserver_class: com.dell.doradus.server.JettyWebServer
+    webserver_class: com.dell.doradus.service.rest.JettyWebServer
 
 OLAPService:
     olap_cache_size_mb: 1000

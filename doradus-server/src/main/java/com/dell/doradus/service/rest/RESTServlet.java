@@ -66,13 +66,7 @@ public class RESTServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
             long startNano = System.nanoTime();
-            RESTService.instance().onNewrequest();
             RESTResponse restResponse = validateAndExecuteRequest(request);
-            if (restResponse.getCode().getCode() >= 300) {
-                RESTService.instance().onRequestRejected(restResponse.getCode().toString());
-            } else {
-                RESTService.instance().onRequestSuccess(startNano);
-            }
             sendResponse(response, restResponse);
             m_logger.debug("Elapsed time: {} millis; request={}",
                            (float)(System.nanoTime() - startNano)/1000000, getFullURI(request));
@@ -81,35 +75,30 @@ public class RESTServlet extends HttpServlet {
             RESTResponse restResponse = new RESTResponse(HttpCode.BAD_REQUEST, getNestedMessage(e));
             m_logger.info("Returning client error: {}; request: {}",
                           restResponse.toString(), getFullURI(request));
-            RESTService.instance().onRequestRejected(restResponse.getCode().toString());
             sendResponse(response, restResponse);
         } catch (NotFoundException e) {
             // 404 Not Found
             RESTResponse restResponse = new RESTResponse(HttpCode.NOT_FOUND, e.getMessage());
             m_logger.info("Returning client error: {}; request: {}",
                           restResponse.toString(), getFullURI(request));
-            RESTService.instance().onRequestRejected(restResponse.getCode().toString());
             sendResponse(response, restResponse);
         } catch (DBNotAvailableException e) {
             // 503 Service Unavailable
             RESTResponse restResponse = new RESTResponse(HttpCode.SERVICE_UNAVAILABLE, e.getMessage());
             m_logger.info("Returning service error: {}; request: {}",
                           restResponse.toString(), getFullURI(request));
-            RESTService.instance().onRequestRejected(restResponse.getCode().toString());
             sendResponse(response, restResponse);
         } catch (UnauthorizedException e) {
             // 401 Unauthorized
             RESTResponse restResponse = new RESTResponse(HttpCode.UNAUTHORIZED, e.getMessage());
             m_logger.info("Returning client error: {}; request: {}",
                           restResponse.toString(), getFullURI(request));
-            RESTService.instance().onRequestRejected(restResponse.getCode().toString());
             sendResponse(response, restResponse);
         } catch (DuplicateException e) {
             // 409 Conflict
             RESTResponse restResponse = new RESTResponse(HttpCode.CONFLICT, e.getMessage());
             m_logger.info("Returning client error: {}; request: {}",
                           restResponse.toString(), getFullURI(request));
-            RESTService.instance().onRequestRejected(restResponse.getCode().toString());
             sendResponse(response, restResponse);
         } catch (OutOfMemoryError e) {
             // Report a fatal exception then shutdown. This is considered a better
@@ -123,7 +112,6 @@ public class RESTServlet extends HttpServlet {
             m_logger.error("Unexpected exception handling request: " + getFullURI(request), e);
             String stackTrace = Utils.getStackTrace(e);
             RESTResponse restResponse = new RESTResponse(HttpCode.INTERNAL_ERROR, stackTrace);
-            RESTService.instance().onRequestFailed(e);
             sendResponse(response, restResponse);
         }
     }    // goGet

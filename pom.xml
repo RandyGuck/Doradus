@@ -33,7 +33,6 @@
       <module>doradus-common</module>
       <module>doradus-server</module>
       <module>doradus-client</module>
-      <module>doradus-jetty</module>
       <module>doradus-dynamodb</module>
    </modules>
    <build>

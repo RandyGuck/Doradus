@@ -36,18 +36,6 @@ import com.dell.doradus.service.schema.SchemaService;
  * to the appropriate command.
  */
 public class RESTService extends Service {
-    /**
-     * Request callback interface when someone wants to be notified about request actions.
-     */
-    public static interface RequestCallback {
-        void onConnectionOpened();
-        void onConnectionClosed();
-        void onNewRequest();
-        void onRequestSucceeded(long startTimeNanos);
-        void onRequestRejected(String reason);
-        void onRequestFailed(Throwable e);
-    }   // interface RequestCallback
-	
     private static final RESTService INSTANCE = new RESTService();
     private WebServer m_webservice;
     private final RESTRegistry m_cmdRegistry = new RESTRegistry();
@@ -108,18 +96,6 @@ public class RESTService extends Service {
     public RESTCatalog describeCommands() {
         return m_cmdRegistry.describeCommands();
     }
-    
-    /**
-     * Register the given activity callback, which will be notified each time client
-     * request activity occurs. 
-     * 
-     * @param callback  {@link RequestCallback} object.
-     */
-    public void registerRequestCallback(RequestCallback callback) {
-       	if (m_webservice != null) {
-       		m_webservice.registerRequestCallback(callback);
-       	}
-    }   // registerRequestCallback
     
     /**
      * Register a set of REST commands as global (system) commands. The commands are
@@ -206,32 +182,6 @@ public class RESTService extends Service {
         }
         return m_cmdRegistry.findCommand(cmdOwner, method, uri, query, variableMap);
     }   // matchCommand
-    
-    //----- Package-private methods (used by RESTServlet)
-
-    void onNewrequest() {
-       	if (m_webservice != null) {
-       		m_webservice.notifyNewRequest(); 
-       	}
-    } 
-    
-    void onRequestSuccess(long startTimeNanos) {
-       	if (m_webservice != null) {
-       		m_webservice.notifyRequestSuccess(startTimeNanos);
-       	}
-    }   
-    
-    void onRequestRejected(String reason) {
-       	if (m_webservice != null) {
-       		m_webservice.notifyRequestRejected(reason);
-       	}
-    }   
-    
-    void onRequestFailed(Throwable e) {
-       	if (m_webservice != null) {
-       		m_webservice.notifyRequestFailed(e);
-       	}
-    } 
     
     //----- Private methods
     

@@ -19,8 +19,6 @@ package com.dell.doradus.service.rest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.dell.doradus.service.rest.RESTService.RequestCallback;
-
 /**
  * Abstract root class for WebServer implementation
  */
@@ -42,35 +40,6 @@ public abstract class WebServer {
 	 * stop WebServer
 	 */
 	public abstract void stop();
-	
-	/**
-	 * register Register the given request callback
-	 * @param callback
-	 */
-	public abstract void registerRequestCallback(RequestCallback callback);
-	
-	/**
-	 * Notify the given request callback when there is a new request
-	 */
-	public abstract void notifyNewRequest();
-	
-	/**
-	 * Notify the given request callback when request is successful
-	 * @param startTimeNanos
-	 */
-	public abstract void notifyRequestSuccess(long startTimeNanos);
-	
-	/**
-	 * Notify the given request callback when request is rejected with a reason
-	 * @param reason
-	 */
-	public abstract void notifyRequestRejected(String reason);
-	
-	/**
-	 * Notify the given request callback when request is failed with a reason
-	 * @param e
-	 */
-	public abstract void notifyRequestFailed(Throwable e);	
 	
 	protected final Logger m_logger = LoggerFactory.getLogger(getClass().getSimpleName());
 }

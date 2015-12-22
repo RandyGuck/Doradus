@@ -92,10 +92,15 @@
             <artifactId>slf4j-log4j12</artifactId>
             <version>1.7.12</version>
         </dependency>
-	   <dependency>
-	      <groupId>org.eclipse.jgit</groupId>
-	      <artifactId>org.eclipse.jgit</artifactId>
-	      <version>4.0.0.201506020755-rc3</version>
-	    </dependency>           
+        <dependency>
+           <groupId>org.eclipse.jgit</groupId>
+           <artifactId>org.eclipse.jgit</artifactId>
+           <version>4.0.0.201506020755-rc3</version>
+         </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-maven-plugin</artifactId>
+            <version>9.2.7.v20150116</version>
+        </dependency>
     </dependencies>
 </project>
