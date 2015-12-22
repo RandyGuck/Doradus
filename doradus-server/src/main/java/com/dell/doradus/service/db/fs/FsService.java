@@ -17,9 +17,7 @@
 package com.dell.doradus.service.db.fs;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -50,6 +48,7 @@ public class FsService extends DBService {
         m_logger.info("Using FS API");
         File root = new File(ROOT);
         if(!root.exists()) root.mkdirs();
+        m_logger.info("Root file path: {}", ROOT);
     }
 
     @Override public void stopService() {
@@ -120,17 +119,8 @@ public class FsService extends DBService {
 
     @Override public List<String> getRows(String storeName, String continuationToken, int count) {
         synchronized (m_sync) {
-            List<String> list = new ArrayList<>();
-            File storeDir = new File(ROOT + "/" + getTenant().getName() + "/" + storeName);
-            if(!storeDir.exists()) return list;
-            for(File rowFile: storeDir.listFiles()) {
-                String row = FileUtils.decode(rowFile.getName());
-                if(continuationToken != null && continuationToken.compareTo(row) >= 0) continue;
-                list.add(row);
-                if(list.size() >= count) break;
-            }
-            Collections.sort(list);
-            return list;
+            FsStore store = getStore(getTenant().getName(), storeName);
+            return store.getRows(continuationToken, count);
         }
     }
 
