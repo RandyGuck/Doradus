@@ -158,9 +158,6 @@ public class SchemaService extends Service {
      * 
      * @return The {@link ApplicationDefinition} for the given application or null if no
      *         no application such application is defined in the default tenant.
-     *         
-     * @deprecated  This method only works for the default tenant. Use
-     *              {@link #getApplication(Tenant, String)} instead. 
      */
     public ApplicationDefinition getApplication(String appName) {
         checkServiceState();
