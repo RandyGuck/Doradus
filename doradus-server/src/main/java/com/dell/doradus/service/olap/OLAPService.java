@@ -262,7 +262,7 @@ public class OLAPService extends StorageService {
     public List<ApplicationDefinition> getAllOLAPApplications(Tenant tenant) {
         List<ApplicationDefinition> appDefs = new ArrayList<>();
         for (ApplicationDefinition appDef : SchemaService.instance().getAllApplications(tenant)) {
-            if (OLAPService.class.getSimpleName().equals(appDef.getStorageService())) {
+            if (appDef.getStorageService().startsWith("OLAP")) {
                 appDefs.add(appDef);
             }
         }
