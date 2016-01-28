@@ -33,14 +33,14 @@ public class RowSequence implements Sequence<DRow> {
     
     @Override public DRow next() {
         if(m_currentList == null) {
-            m_currentList = DBService.instance(m_tenant).getRows(m_storeName, null, m_chunkSize);
+            m_currentList = DBService.instance().getRows(m_storeName, null, m_chunkSize);
         }
         if(m_currentList.size() == 0) {
             return null;
         }
         if(m_pointer == m_currentList.size()) {
             String continuationToken = m_currentList.get(m_pointer - 1);
-            m_currentList = DBService.instance(m_tenant).getRows(m_storeName, continuationToken, m_chunkSize);
+            m_currentList = DBService.instance().getRows(m_storeName, continuationToken, m_chunkSize);
             m_pointer = 0;
             // if the first row in the next chunk equals to the next row
             if(m_currentList.size() > 0 && continuationToken.equals(m_currentList.get(0))) {

@@ -33,7 +33,7 @@ public class CassandraIO implements IO {
 
 	@Override
 	public byte[] getValue(String app, String key, String column) {
-		DColumn col = DBService.instance(m_tenant).getColumn(app, key, column);
+		DColumn col = DBService.instance().getColumn(app, key, column);
 		if(col == null) return null;
 		return col.getRawValue();
 	}
@@ -41,7 +41,7 @@ public class CassandraIO implements IO {
 	@Override
 	public List<ColumnValue> get(String app, String key, String prefix) {
 		List<ColumnValue> result = new ArrayList<ColumnValue>();
-		for(DColumn column: DBService.instance(m_tenant).getColumnSlice(app, key, prefix, prefix + "\uFFFF")) {
+		for(DColumn column: DBService.instance().getColumnSlice(app, key, prefix, prefix + "\uFFFF")) {
 			result.add(new ColumnValue(column.getName().substring(prefix.length()), column.getRawValue()));
 		}
 		return result;
@@ -57,21 +57,21 @@ public class CassandraIO implements IO {
 
 	@Override
 	public void delete(String columnFamily, String key, String columnName) {
-		DBTransaction transaction = DBService.instance(m_tenant).startTransaction();
+		DBTransaction transaction = DBService.instance().startTransaction();
 		if (columnName == null) {
 			transaction.deleteRow(columnFamily, key);
 		} else {
 			transaction.deleteColumn(columnFamily, key, columnName);
 		}
-		DBService.instance(m_tenant).commit(transaction);
+		DBService.instance().commit(transaction);
 	}
 
 	@Override public void write(String app, String key, List<ColumnValue> values) {
-	    DBTransaction transaction = DBService.instance(m_tenant).startTransaction();
+	    DBTransaction transaction = DBService.instance().startTransaction();
 	    for(ColumnValue v : values) {
 	        transaction.addColumn(app, key, v.columnName, v.columnValue);
 	    }
-	    DBService.instance(m_tenant).commit(transaction);
+	    DBService.instance().commit(transaction);
 	}
 	
 }

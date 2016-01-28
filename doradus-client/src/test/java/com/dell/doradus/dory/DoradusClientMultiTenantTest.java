@@ -42,9 +42,7 @@ import com.dell.doradus.common.ApplicationDefinition;
 import com.dell.doradus.common.DBObject;
 import com.dell.doradus.common.DBObjectBatch;
 import com.dell.doradus.common.RESTResponse;
-import com.dell.doradus.common.TenantDefinition;
 import com.dell.doradus.common.UNode;
-import com.dell.doradus.common.UserDefinition;
 import com.dell.doradus.dory.command.Command;
 
 
@@ -170,30 +168,6 @@ public class DoradusClientMultiTenantTest {
         
     }
 
-    @Test
-    public void testTenantManagmentCommands() throws Exception {
-        Credentials credentials = new Credentials(null, "cassandra", "cassandra");      
-        DoradusClient client = new DoradusClient(HOST, PORT, credentials);
-        
-        //test ListTenant
-        RESTResponse response = client.runCommand(Command.builder().withName("ListTenant").withParam("tenant", "HelloKitty").build());
-        if (response.getCode().getCode() == 200) {
-            //test DeleteTenant
-            response = client.runCommand(Command.builder().withName("DeleteTenant").withParam("tenant", "HelloKitty").build());         
-        }
-        //test DefineTenant
-        TenantDefinition tenantDef = new TenantDefinition();
-        tenantDef.setName("HelloKitty");
-        UserDefinition userDef = new UserDefinition("Katniss");
-        userDef.setPassword("Everdeen");
-        tenantDef.addUser(userDef);
-        response = client.runCommand(Command.builder().withName("DefineTenant").withParam("TenantDefinition", tenantDef).build());
-        assertTrue(response.getCode().getCode() == 200); 
-        assertTrue(response.getBody().contains("HelloKitty"));
-    
-        client.close();
-    }
-    
     @Test
     public void testSpiderSchemaSystemCommands() throws Exception {
         Credentials credentials = new Credentials("HelloKitty", "Katniss", "Everdeen");         

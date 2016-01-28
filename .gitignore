@@ -11,3 +11,4 @@ doradus.log
 truststore
 keystore
 */target/*
+.recommenders/

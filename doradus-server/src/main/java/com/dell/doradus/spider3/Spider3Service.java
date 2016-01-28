@@ -173,13 +173,13 @@ public class Spider3Service extends StorageService {
     @Override
     public void deleteApplication(ApplicationDefinition appDef) {
         checkServiceState();
-        Spider3.instance().deleteApplication(Tenant.getTenant(appDef), appDef.getAppName());
+        Spider3.instance().deleteApplication(new Tenant(), appDef.getAppName());
     }
 
     @Override
     public void initializeApplication(ApplicationDefinition oldAppDef, ApplicationDefinition appDef) {
         checkServiceState();
-        Spider3.instance().createApplication(Tenant.getTenant(appDef), appDef.getAppName());
+        Spider3.instance().createApplication(new Tenant(), appDef.getAppName());
     }
 
     @Override

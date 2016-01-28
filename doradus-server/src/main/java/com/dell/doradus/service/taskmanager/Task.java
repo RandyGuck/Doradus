@@ -64,7 +64,7 @@ public abstract class Task implements Runnable {
     public Task(ApplicationDefinition appDef, String tableName, String taskName, String taskFreq) {
         m_appDef = appDef;
         m_appName = appDef.getAppName();
-        m_tenant = Tenant.getTenant(m_appDef);
+        m_tenant = new Tenant();
         m_tableName = Utils.isEmpty(tableName) ? "*" : tableName;
         m_taskName = taskName;
         m_taskFreq = new TaskFrequency(Utils.isEmpty(taskFreq) ? "1 MINUTE" : taskFreq);

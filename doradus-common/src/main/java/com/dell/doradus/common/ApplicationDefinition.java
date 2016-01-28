@@ -30,10 +30,7 @@ import java.util.TreeMap;
  * Holds the definition of an application, including its options, tables, and their
  * fields.
  */
-final public class ApplicationDefinition implements JSONable{
-    // Tenant name when app def is created/fetched by server:
-    private String m_tenantName;
-    
+final public class ApplicationDefinition implements JSONable {
     // Application name (case-sensitive):
     private String m_appName;
     
@@ -133,10 +130,6 @@ final public class ApplicationDefinition implements JSONable{
 
     ///// Getters
 
-    public String getTenantName() {
-        return m_tenantName;
-    }
-    
     /**
      * Return this application's name.
      * 
@@ -264,10 +257,6 @@ final public class ApplicationDefinition implements JSONable{
     }   // toString()
     
     ///// Setters
-    
-    public void setTenantName(String tenantName) {
-        m_tenantName = tenantName;
-    }
     
     /**
      * Set this ApplicationDefinition's application name to the given value. An exception

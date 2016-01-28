@@ -122,7 +122,7 @@ public class DynamoDBService extends DBService {
         m_retry_wait_millis = getParamInt("retry_wait_millis", 5000);
         m_max_commit_attempts = getParamInt("max_commit_attempts", 10);
         m_max_read_attempts = getParamInt("max_read_attempts", 3);
-        m_tenantPrefix = Utils.isEmpty(tenant.getNamespace()) ? "" : tenant.getNamespace() + "_"; 
+        m_tenantPrefix = Utils.isEmpty(tenant.getName()) ? "" : tenant.getName() + "_"; 
         
         m_ddbClient = new AmazonDynamoDBClient(getCredentials());
         setRegionOrEndPoint();

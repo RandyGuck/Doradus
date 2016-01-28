@@ -176,8 +176,7 @@ public class SpiderService extends StorageService {
     public DBObject getObject(TableDefinition tableDef, String objID) {
         checkServiceState();
         String storeName = objectsStoreName(tableDef);
-        Tenant tenant = Tenant.getTenant(tableDef);
-        Iterator<DColumn> colIter = DBService.instance(tenant).getAllColumns(storeName, objID).iterator();
+        Iterator<DColumn> colIter = DBService.instance().getAllColumns(storeName, objID).iterator();
         if (!colIter.hasNext()) {
             return null;
         }
@@ -425,10 +424,9 @@ public class SpiderService extends StorageService {
                                                              Collection<String> fieldNames) {
         checkServiceState();
         Map<String, Map<String, String>> objScalarMap = new HashMap<>();
-        Tenant tenant = Tenant.getTenant(tableDef);
         if (objIDs.size() > 0 && fieldNames.size() > 0) {
             String storeName = objectsStoreName(tableDef);
-            for(DRow row: DBService.instance(tenant).getRows(storeName, objIDs)) {
+            for(DRow row: DBService.instance().getRows(storeName, objIDs)) {
                 Map<String, String> scalarMap = new HashMap<>();
                 objScalarMap.put(row.getKey(), scalarMap);
                 Iterator<DColumn> colIter = row.getColumns(fieldNames).iterator();
@@ -458,10 +456,9 @@ public class SpiderService extends StorageService {
                                                String             fieldName) {
         checkServiceState();
         Map<String, String> objScalarMap = new HashMap<>();
-        Tenant tenant = Tenant.getTenant(tableDef);
         if (objIDs.size() > 0) {
             String storeName = objectsStoreName(tableDef);
-            for(DRow row: DBService.instance(tenant).getRows(storeName, objIDs)) {
+            for(DRow row: DBService.instance().getRows(storeName, objIDs)) {
                 DColumn col = row.getColumn(fieldName);
                 if (col != null) {
                     String fieldValue = scalarValueToString(tableDef, col.getName(), col.getRawValue());
@@ -514,12 +511,12 @@ public class SpiderService extends StorageService {
     // Add an implicit table to the given application and return its new TableDefinition.
     private TableDefinition addAutoTable(ApplicationDefinition appDef, String tableName) {
         m_logger.debug("Adding implicit table '{}' to application '{}'", tableName, appDef.getAppName());
-        Tenant tenant = Tenant.getTenant(appDef);
+        Tenant tenant = new Tenant();
         TableDefinition tableDef = new TableDefinition(appDef);
         tableDef.setTableName(tableName);
         appDef.addTable(tableDef);
         SchemaService.instance().defineApplication(tenant, appDef);
-        appDef = SchemaService.instance().getApplication(tenant, appDef.getAppName());
+        appDef = SchemaService.instance().getApplication(appDef.getAppName());
         return appDef.getTableDef(tableName);
     }   // addAutoTable
     
@@ -565,10 +562,9 @@ public class SpiderService extends StorageService {
     // Delete all ColumnFamilies used by the given application. Only delete the ones that
     // actually exist in case a previous delete-app failed.
     private void deleteApplicationCFs(ApplicationDefinition appDef) {
-        Tenant tenant = Tenant.getTenant(appDef);
         for (TableDefinition tableDef : appDef.getTableDefinitions().values()) {
-            DBService.instance(tenant).deleteStoreIfPresent(objectsStoreName(tableDef));
-            DBService.instance(tenant).deleteStoreIfPresent(termsStoreName(tableDef));
+            DBService.instance().deleteStoreIfPresent(objectsStoreName(tableDef));
+            DBService.instance().deleteStoreIfPresent(termsStoreName(tableDef));
         }
     }   // deleteApplicationCFs
     
@@ -586,8 +582,7 @@ public class SpiderService extends StorageService {
         }
         TableDefinition tableDef = linkDef.getTableDef();
         String termStore = termsStoreName(tableDef);
-        Tenant tenant = Tenant.getTenant(tableDef);
-        for(DRow row: DBService.instance(tenant).getRows(termStore, termRowKeys)) {
+        for(DRow row: DBService.instance().getRows(termStore, termRowKeys)) {
             for(DColumn column: row.getAllColumns(1024)) {
                 values.add(column.getName());
             }
@@ -810,8 +805,7 @@ public class SpiderService extends StorageService {
     private void verifyApplicationCFs(ApplicationDefinition oldAppDef,
                                       ApplicationDefinition appDef) {
         // Add new table-level CFs:
-        Tenant tenant = Tenant.getTenant(appDef);
-        DBService dbService = DBService.instance(tenant);
+        DBService dbService = DBService.instance();
         for (TableDefinition tableDef : appDef.getTableDefinitions().values()) {
             dbService.createStoreIfAbsent(objectsStoreName(tableDef), true);
             dbService.createStoreIfAbsent(termsStoreName(tableDef), true);

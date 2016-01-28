@@ -37,7 +37,7 @@ public class DeleteApplicationKeyCmd extends RESTCallback {
     public RESTResponse invoke() {
         String appName = m_request.getVariableDecoded("application");
         ApplicationDefinition appDef =
-            SchemaService.instance().getApplication(m_request.getTenant(), appName);
+            SchemaService.instance().getApplication(appName);
         if (appDef == null) {
             throw new NotFoundException("Unknown application: " + appName);
         }

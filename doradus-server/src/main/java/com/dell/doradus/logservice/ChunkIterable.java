@@ -1,20 +1,16 @@
 package com.dell.doradus.logservice;
 
-import com.dell.doradus.service.db.Tenant;
-
 public class ChunkIterable implements Iterable<ChunkInfo> {
-    private Tenant m_tenant;
     private String m_store;
     private String m_partition;
     
-    public ChunkIterable(Tenant tenant, String store, String partition) {
-        m_tenant = tenant;
+    public ChunkIterable(String store, String partition) {
         m_store = store;
         m_partition = partition;
     }
 
     @Override public ChunkIterator iterator() {
-        return new ChunkIterator(m_tenant, m_store, m_partition);
+        return new ChunkIterator(m_store, m_partition);
     }
     
 }

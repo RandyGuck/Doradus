@@ -90,11 +90,6 @@ public class ServerParams {
             "param_override_filename"
         );
         
-        setLegacy("TenantService",
-            "disable_default_keyspace",
-            "multitenant_mode"
-        );
-        
         setLegacy("RESTService",
             "clientauthentication",
             "defaultIdleTimeout",

@@ -33,9 +33,6 @@ DoradusServer:
 #    super_user: cassandra
 #    super_password: cassandra
 
-TenantService:
-    default_tenant_name: Doradus
-
 # Parameters common to the default database.
 DBService:
     # Defines the concrete DBService that manages the default database.

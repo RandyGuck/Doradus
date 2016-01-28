@@ -36,7 +36,6 @@ import com.dell.doradus.common.HttpDefs;
 import com.dell.doradus.common.HttpMethod;
 import com.dell.doradus.common.Pair;
 import com.dell.doradus.common.RESTResponse;
-import com.dell.doradus.common.UserDefinition.Permission;
 import com.dell.doradus.common.Utils;
 import com.dell.doradus.core.DoradusServer;
 import com.dell.doradus.service.db.DBNotAvailableException;
@@ -44,7 +43,6 @@ import com.dell.doradus.service.db.DuplicateException;
 import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.db.UnauthorizedException;
 import com.dell.doradus.service.schema.SchemaService;
-import com.dell.doradus.service.tenant.TenantService;
 
 /**
  * An HttpServlet implementation used by the {@link RESTService} to process REST requests.
@@ -177,7 +175,6 @@ public class RESTServlet extends HttpServlet {
         if (cmd == null) {
             throw new NotFoundException("Request does not match a known URI: " + request.getRequestURL());
         }
-        validateTenantAccess(request, tenant, cmd);
         
         RESTCallback callback = cmd.getNewCallback();
         callback.setRequest(new RESTRequest(tenant, appDef, request, variableMap));
@@ -191,7 +188,7 @@ public class RESTServlet extends HttpServlet {
         }
         String[] pathNodes = uri.substring(1).split("/");
         String appName = Utils.urlDecode(pathNodes[0]);
-        ApplicationDefinition appDef = SchemaService.instance().getApplication(tenant, appName);
+        ApplicationDefinition appDef = SchemaService.instance().getApplication(appName);
         if (appDef == null) {
             throw new NotFoundException("Unknown application: " + appName);
         }
@@ -200,57 +197,7 @@ public class RESTServlet extends HttpServlet {
     
     // Get the Tenant context for this command and multi-tenant configuration options.
     private Tenant getTenant(Map<String, String> variableMap) {
-        String tenantName = variableMap.get("tenant");
-        if (Utils.isEmpty(tenantName)) {
-            tenantName = TenantService.instance().getDefaultTenantName();
-        }
-        Tenant tenant = TenantService.instance().getTenant(tenantName);
-        if (tenant == null) {
-            throw new NotFoundException("Unknown tenant: " + tenantName);
-        }
-        return tenant;
-    }
-
-    // Extract Authorization header, if any, and validate this command for the given tenant.
-    private void validateTenantAccess(HttpServletRequest request, Tenant tenant, RegisteredCommand cmdModel) {
-        String authString = request.getHeader("Authorization");
-        StringBuilder userID = new StringBuilder();
-        StringBuilder password = new StringBuilder();
-        decodeAuthorizationHeader(authString, userID, password);
-        Permission perm = permissionForMethod(request.getMethod());
-        TenantService.instance().validateTenantAccess(tenant, userID.toString(), password.toString(), 
-                                                      perm, cmdModel.isPrivileged());
-    }
-
-    // Map an HTTP method to the permission needed to execute it.
-    private Permission permissionForMethod(String method) {
-        switch (method.toUpperCase()) {
-        case "GET":
-            return Permission.READ;
-        case "PUT":
-        case "DELETE":
-            return Permission.UPDATE;
-        case "POST":
-            return Permission.APPEND;
-        default:
-            throw new RuntimeException("Unexpected REST method: " + method);
-        }
-    }
-    
-    // Decode the given Authorization header value into its user/password components.
-    private void decodeAuthorizationHeader(String authString, StringBuilder userID, StringBuilder password) {
-        userID.setLength(0);
-        password.setLength(0);
-        if (!Utils.isEmpty(authString) && authString.toLowerCase().startsWith("basic ")) {
-            String decoded = Utils.base64ToString(authString.substring("basic ".length()));
-            int inx = decoded.indexOf(':');
-            if (inx < 0) {
-                userID.append(decoded);
-            } else {
-                userID.append(decoded.substring(0, inx));
-                password.append(decoded.substring(inx + 1));
-            }
-        }
+        return new Tenant();
     }
 
     // Send the given response, which includes a response code and optionally a body

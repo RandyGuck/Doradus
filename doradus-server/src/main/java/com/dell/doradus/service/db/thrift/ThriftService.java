@@ -53,11 +53,7 @@ public class ThriftService extends CassandraService {
     public ThriftService(Tenant tenant) {
         super(tenant);
         m_schemaMgr = new CassandraSchemaMgr(this);
-        if (Utils.isEmpty(tenant.getNamespace())) {
-            m_keyspace = tenant.getName();
-        } else {
-            m_keyspace = tenant.getNamespace();
-        }
+        m_keyspace = tenant.getName();
         
         // Create a no-session DBConn and get keyspaces to verify it.
         try (DBConn dbConn = createAndConnectConn(null)) {

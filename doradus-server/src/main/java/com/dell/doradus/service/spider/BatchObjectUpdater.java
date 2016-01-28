@@ -37,7 +37,6 @@ import com.dell.doradus.common.Utils;
 import com.dell.doradus.core.ServerParams;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
-import com.dell.doradus.service.db.Tenant;
 
 /**
  * Performs updates for a batch of objects in a specific table. All updates are accummulated
@@ -148,10 +147,9 @@ public class BatchObjectUpdater {
 
     // Post all updates in the parent transaction to the database.
     private void commitTransaction() {
-        Tenant tenant = Tenant.getTenant(m_tableDef);
-        DBTransaction dbTran = DBService.instance(tenant).startTransaction();
+        DBTransaction dbTran = DBService.instance().startTransaction();
         m_parentTran.applyUpdates(dbTran);
-        DBService.instance(tenant).commit(dbTran);
+        DBService.instance().commit(dbTran);
         m_parentTran.clear();
     }
 

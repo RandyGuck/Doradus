@@ -51,7 +51,7 @@ public class DRow {
     }
     
     public List<DColumn> getColumns(Collection<String> columnNames) {
-        return DBService.instance(m_tenant).getColumns(m_storeName, m_rowKey, columnNames);
+        return DBService.instance().getColumns(m_storeName, m_rowKey, columnNames);
     }
 
     public DColumn getColumn(String columnName) {
@@ -71,13 +71,13 @@ public class DRow {
         for(String columnName: columnNames) {
             partial.add(columnName);
             if(partial.size() >= chunkSize) {
-                List<DColumn> partialList = DBService.instance(m_tenant).getColumns(m_storeName, m_rowKey, partial);
+                List<DColumn> partialList = DBService.instance().getColumns(m_storeName, m_rowKey, partial);
                 columns.addAll(partialList);
                 partial.clear();
             }
         }
         if(partial.size() > 0) {
-            List<DColumn> partialList = DBService.instance(m_tenant).getColumns(m_storeName, m_rowKey, partial);
+            List<DColumn> partialList = DBService.instance().getColumns(m_storeName, m_rowKey, partial);
             columns.addAll(partialList);
             partial.clear();
         }

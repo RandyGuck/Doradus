@@ -44,9 +44,10 @@ import com.dell.doradus.service.rest.RESTCallback;
 import com.dell.doradus.service.rest.RESTService;
 
 /**
- * The container and entrypoint for the Doradus Server. Contains methods to start the
- * server as a console application or as a service, e.g., via procrun. Initializes
- * all services, watches for all a shutdown signal, then shuts down all services.
+ * The container and entrypoint for the Doradus Server. Contains methods to
+ * start the server as a console application or as a service, e.g., via procrun.
+ * Initializes all services, watches for all a shutdown signal, then shuts down
+ * all services.
  */
 public final class DoradusServer {
     // Singleton object:
@@ -55,58 +56,55 @@ public final class DoradusServer {
     // True after init() and start() have been called, respectively:
     private boolean m_bInitialized;
     private boolean m_bRunning;
-    
+
     // Logging interface:
     private final Logger m_logger = LoggerFactory.getLogger(getClass().getSimpleName());
 
     // Services required in every start (in addition to 1 storage service):
     private static final String[] REQUIRED_SERVICES = new String[] {
-        com.dell.doradus.service.db.DBManagerService.class.getName(),
-        com.dell.doradus.service.schema.SchemaService.class.getName(),
-        com.dell.doradus.service.tenant.TenantService.class.getName()
-    };
-    
+            com.dell.doradus.service.db.DBService.class.getName(),
+            com.dell.doradus.service.schema.SchemaService.class.getName() };
+
     // List of initialized services:
     private final List<Service> m_initializedServices = new ArrayList<>();
 
     // List of initialized/started StorageServices:
     private final List<StorageService> m_storageServices = new ArrayList<>();
-    
+
     // List of all started services (the ones we must call "stop" on):
     private final List<Service> m_startedServices = new ArrayList<>();
-    
+
     // System commands supported directly by the DoradusServer:
-    private static final List<Class<? extends RESTCallback>> CMD_CLASSES = Arrays.asList(
-        ThreadDumpCmd.class,
-        LogDumpCmd.class,
-        GetConfigCmd.class
-    );
-    
+    private static final List<Class<? extends RESTCallback>> CMD_CLASSES = Arrays.asList(ThreadDumpCmd.class,
+            LogDumpCmd.class, GetConfigCmd.class);
+
     private static final String VERSION_FILE = "doradus.ver";
-    
+
     ///// Public methods
-    
+
     /**
-     * Get the singleton instance of the DoradusServer. The instance may or may not yet be
-     * initialized.
+     * Get the singleton instance of the DoradusServer. The instance may or may
+     * not yet be initialized.
      * 
-     * @return  The singleton instance of the DoradusServer.
+     * @return The singleton instance of the DoradusServer.
      */
     public static DoradusServer instance() {
         return INSTANCE;
-    }   // instance
-    
+    } // instance
+
     /**
-     * Start the Doradus Server in stand-alone mode, overriding doradus.yaml file options
-     * with the given options. All required services plus default_services and
-     * storage_services configured in doradus.yaml are started. The process blocks until a
-     * shutdown signal is received via Ctrl-C or until {@link #shutdown(String[])} is
-     * called.
+     * Start the Doradus Server in stand-alone mode, overriding doradus.yaml
+     * file options with the given options. All required services plus
+     * default_services and storage_services configured in doradus.yaml are
+     * started. The process blocks until a shutdown signal is received via
+     * Ctrl-C or until {@link #shutdown(String[])} is called.
      * 
-     * @param args  Optional arguments that override doradus.yaml file options. Arguments
-     *              should be provided in the form "-option value" where "option" is a
-     *              doradus.yaml option name and "value" is the overriding value. For
-     *              example: "-restport 1223" sets the REST API listening port to 1223.
+     * @param args
+     *            Optional arguments that override doradus.yaml file options.
+     *            Arguments should be provided in the form "-option value" where
+     *            "option" is a doradus.yaml option name and "value" is the
+     *            overriding value. For example: "-restport 1223" sets the REST
+     *            API listening port to 1223.
      */
     public static void main(String[] args) {
         try {
@@ -117,99 +115,108 @@ public final class DoradusServer {
             instance().m_logger.error("Abnormal shutdown", e);
             System.exit(1); // invokes shutdown hooks
         }
-    }   // main
+    } // main
 
     /**
-     * Entrypoint method when Doradus is run as a Windows service. Currently, does the
-     * same thing as {@link #main(String[])}. This method blocks until a shutdown is
-     * received via Ctrl-C or {@link #shutDown()} is called in another thread.
+     * Entrypoint method when Doradus is run as a Windows service. Currently,
+     * does the same thing as {@link #main(String[])}. This method blocks until
+     * a shutdown is received via Ctrl-C or {@link #shutDown()} is called in
+     * another thread.
      * 
-     * @param args  See {@link #main(String[])} for examples.
+     * @param args
+     *            See {@link #main(String[])} for examples.
      */
     public static void startServer(String[] args) {
         main(args);
-    }   // startServer
-    
+    } // startServer
+
     /**
-     * Start the Doradus Server in stand-alone mode but return as soon as all internal
-     * services are started. doradus.yaml file options are overridden by the args, if any.
-     * All required services plus default_services and storage_services configured in
-     * doradus.yaml are started. When the method returns, all internal services are
-     * started by may not be ready to use.
+     * Start the Doradus Server in stand-alone mode but return as soon as all
+     * internal services are started. doradus.yaml file options are overridden
+     * by the args, if any. All required services plus default_services and
+     * storage_services configured in doradus.yaml are started. When the method
+     * returns, all internal services are started by may not be ready to use.
      * 
-     * @param args  Optional arguments that override doradus.yaml file options. Arguments
-     *              should be provided in the form "-option value" where "option" is a
-     *              doradus.yaml option name and "value" is the overriding value. For
-     *              example: "-restport 1223" sets the REST API listening port to 1223.
+     * @param args
+     *            Optional arguments that override doradus.yaml file options.
+     *            Arguments should be provided in the form "-option value" where
+     *            "option" is a doradus.yaml option name and "value" is the
+     *            overriding value. For example: "-restport 1223" sets the REST
+     *            API listening port to 1223.
      */
     public static void startServerUnblocked(String[] args) {
         instance().initStandAlone(args);
         instance().start();
-    }   // startServerUnblocked
+    } // startServerUnblocked
 
     /**
-     * Entrypoint method to embed a Doradus server in an application. The args parameter
-     * is the same as {@link #startServer(String[])} and {@link #main(String[])}, which
-     * override doradus.yaml file defaults. However, instead of starting all services,
-     * only those in the given services parameter plus "required" services are started. At
-     * least one storage service must be given, otherwise an exception is thrown. Once all
-     * services have been started, this method returns, allowing the application to use
-     * the now-running embedded server. When the application is done, it should call
-     * {@link #shutDown()} or {@link #stopServer(String[])} to gracefully shut down the
-     * server.
+     * Entrypoint method to embed a Doradus server in an application. The args
+     * parameter is the same as {@link #startServer(String[])} and
+     * {@link #main(String[])}, which override doradus.yaml file defaults.
+     * However, instead of starting all services, only those in the given
+     * services parameter plus "required" services are started. At least one
+     * storage service must be given, otherwise an exception is thrown. Once all
+     * services have been started, this method returns, allowing the application
+     * to use the now-running embedded server. When the application is done, it
+     * should call {@link #shutDown()} or {@link #stopServer(String[])} to
+     * gracefully shut down the server.
      * 
-     * @param args      See {@link #main(String[])} for more details.
-     * @param services  List of service modules to start. The full package name of each
-     *                  must be provided.
+     * @param args
+     *            See {@link #main(String[])} for more details.
+     * @param services
+     *            List of service modules to start. The full package name of
+     *            each must be provided.
      */
     public static void startEmbedded(String[] args, String[] services) {
         instance().initEmbedded(args, services);
         instance().start();
-    }   // startEmbedded
-    
+    } // startEmbedded
+
     /**
-     * Shutdown the Doradus Server by stopping all services and calling System.exit(). The
-     * given args are ignored: they are present for compatibility with Apache's procrun
-     * application.
+     * Shutdown the Doradus Server by stopping all services and calling
+     * System.exit(). The given args are ignored: they are present for
+     * compatibility with Apache's procrun application.
      * 
-     * @param args  Not currently used (ignored).
+     * @param args
+     *            Not currently used (ignored).
      */
     public static void stopServer(String[] args) {
         instance().stop();
         System.exit(0);
-    }   // stopServer
-    
+    } // stopServer
+
     /**
      * Shutdown the Doradus Server by stopping all services. Compared to
-     * {@link #stopServer(String[])}, this method does not call System.exit(). 
+     * {@link #stopServer(String[])}, this method does not call System.exit().
      */
     public static void shutDown() {
         instance().stop();
-    }   // shutDown
-    
+    } // shutDown
+
     /**
-     * Get the name of the default storage-service for this server. This is either the
-     * only {@link StorageService} that has been started, or if there are more than one,
-     * the first one configured in the yaml file.
+     * Get the name of the default storage-service for this server. This is
+     * either the only {@link StorageService} that has been started, or if there
+     * are more than one, the first one configured in the yaml file.
      * 
-     * @return  The name of the default storage-service for this server.
+     * @return The name of the default storage-service for this server.
      */
     public String getDefaultStorageService() {
         assert m_storageServices.size() > 0;
         return m_storageServices.get(0).getClass().getSimpleName();
-    }   // getDefaultStorageService
+    } // getDefaultStorageService
 
     /**
-     * Find a registered storage service with the given name. If there is no storage
-     * service with the registered name, null is returned. This method can only be called
-     * after the DoradusServer has initialized.
+     * Find a registered storage service with the given name. If there is no
+     * storage service with the registered name, null is returned. This method
+     * can only be called after the DoradusServer has initialized.
      * 
-     * @param serviceName   Name of the storage service to find. This is the same as the
-     *                      class's "simple" name. For example, if the class name is
-     *                      "com.dell.doradus.service.spider.SpiderService", the service
-     *                      name is just "SpiderService".
-     * @return              Singleton instance of the given service name if it is
-     *                      registered, otherwise null.
+     * @param serviceName
+     *            Name of the storage service to find. This is the same as the
+     *            class's "simple" name. For example, if the class name is
+     *            "com.dell.doradus.service.spider.SpiderService", the service
+     *            name is just "SpiderService".
+     * @return Singleton instance of the given service name if it is registered,
+     *         otherwise null.
      */
     public StorageService findStorageService(String serviceName) {
         Utils.require(m_bInitialized, "DoradusService has not yet initialized");
@@ -219,78 +226,86 @@ public final class DoradusServer {
             }
         }
         return null;
-    }   // findStorageService
-    
+    } // findStorageService
+
     /**
-     * Get Doradus Version from git repo if it exists; otherwise get it from the local doradus.ver file
+     * Get Doradus Version from git repo if it exists; otherwise get it from the
+     * local doradus.ver file
+     * 
      * @return version
      */
-    public static String getDoradusVersion() {       
+    public static String getDoradusVersion() {
         String version = null;
         try {
-            //first read from the local git repository
-        	Git git = Git.open(new File("../.git"));
+            // first read from the local git repository
+            Git git = Git.open(new File("../.git"));
             String url = git.getRepository().getConfig().getString("remote", "origin", "url");
             instance().m_logger.info("Remote.origin.url: {}", url);
             if (!Utils.isEmpty(url) && url.contains("dell-oss/Doradus.git")) {
-            	DescribeCommand cmd = git.describe();
-            	version = cmd.call();
-            	instance().m_logger.info("Doradus version found from git repo: {}", version);
-            	writeVersionToVerFile(version);
+                DescribeCommand cmd = git.describe();
+                version = cmd.call();
+                instance().m_logger.info("Doradus version found from git repo: {}", version);
+                writeVersionToVerFile(version);
             }
         } catch (Throwable e) {
-        	instance().m_logger.info("failed to read version from git repo");
+            instance().m_logger.info("failed to read version from git repo");
         }
-        //if not found, reading from local file
+        // if not found, reading from local file
         if (Utils.isEmpty(version)) {
-	        try {
-	            version = getVersionFromVerFile();
-	            instance().m_logger.info("Doradus version found from doradus.ver file {}", version);
-	        } catch (IOException e1) {
-	            version = null;
-	        }
+            try {
+                version = getVersionFromVerFile();
+                instance().m_logger.info("Doradus version found from doradus.ver file {}", version);
+            } catch (IOException e1) {
+                version = null;
+            }
         }
         return version;
     }
-    
+
     // Write version to local file
     private static void writeVersionToVerFile(String version) throws IOException {
-        //declared in a try-with-resource statement, it will be closed regardless of it completes normally or not      
-    	try (PrintWriter writer = new PrintWriter(new File(DoradusServer.class.getResource("/" + VERSION_FILE).getPath()))) {
-    		writer.write(version);
-    	}
+        // declared in a try-with-resource statement, it will be closed
+        // regardless of it completes normally or not
+        try (PrintWriter writer = new PrintWriter(
+                new File(DoradusServer.class.getResource("/" + VERSION_FILE).getPath()))) {
+            writer.write(version);
+        }
 
-    }    
+    }
+
     // Get version from local file
     private static String getVersionFromVerFile() throws IOException {
-        //declared in a try-with-resource statement, it will be closed regardless of it completes normally or not
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(DoradusServer.class.getResourceAsStream("/" + VERSION_FILE), "UTF-8"))) {
+        // declared in a try-with-resource statement, it will be closed
+        // regardless of it completes normally or not
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(DoradusServer.class.getResourceAsStream("/" + VERSION_FILE), "UTF-8"))) {
             return br.readLine();
         }
 
     }
-    
+
     ///// Private methods
 
     // Construction via the instance() method only.
-    private DoradusServer() {}
+    private DoradusServer() {
+    }
 
-    // Add configured storage_services to the given set. 
+    // Add configured storage_services to the given set.
     private void addConfiguredStorageServices(Set<String> serviceSet) {
         List<String> ssList = ServerParams.instance().getModuleParamList("DoradusServer", "storage_services");
         if (ssList != null) {
             serviceSet.addAll(ssList);
         }
-    }   // addConfiguredStorageServices
-    
-    // Add configured default_services to the given set. 
+    } // addConfiguredStorageServices
+
+    // Add configured default_services to the given set.
     private void addDefaultServices(Set<String> serviceSet) {
         List<String> defaultServices = ServerParams.instance().getModuleParamList("DoradusServer", "default_services");
         if (defaultServices != null) {
             serviceSet.addAll(defaultServices);
         }
-    }   // addDefaultServices
-    
+    } // addDefaultServices
+
     // Hook the JVM shutdown hook so we get notified for Ctrl-C.
     private void hookShutdownEvent() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -299,9 +314,10 @@ public final class DoradusServer {
                 instance().stop();
             }
         });
-    }   // hookShutdownEvent
-    
-    // Initialize server configuration and given+required services for embedded running.
+    } // hookShutdownEvent
+
+    // Initialize server configuration and given+required services for embedded
+    // running.
     private void initEmbedded(String[] args, String[] services) {
         if (m_bInitialized) {
             m_logger.warn("initEmbedded: Already initialized -- ignoring");
@@ -312,8 +328,8 @@ public final class DoradusServer {
         initEmbeddedServices(services);
         RESTService.instance().registerCommands(CMD_CLASSES);
         m_bInitialized = true;
-    }   // initEmbedded
-    
+    } // initEmbedded
+
     // Initialize services required for embedded start.
     private void initEmbeddedServices(String[] requestedServices) {
         Set<String> serviceSet = new LinkedHashSet<>();
@@ -322,8 +338,8 @@ public final class DoradusServer {
         }
         addRequiredServices(serviceSet);
         initServices(serviceSet);
-    }   // initEmbeddedServices
-    
+    } // initEmbeddedServices
+
     // Initialize server configuration and all services for stand-alone running.
     private void initStandAlone(String[] args) {
         if (m_bInitialized) {
@@ -335,8 +351,8 @@ public final class DoradusServer {
         initStandaAloneServices();
         RESTService.instance().registerCommands(CMD_CLASSES);
         m_bInitialized = true;
-    }   // initStandAlone
-    
+    } // initStandAlone
+
     // Initialize services configured+needed for stand-alone operation.
     private void initStandaAloneServices() {
         Set<String> serviceSet = new LinkedHashSet<>();
@@ -344,21 +360,21 @@ public final class DoradusServer {
         addRequiredServices(serviceSet);
         addConfiguredStorageServices(serviceSet);
         initServices(serviceSet);
-    }   // initStandaAloneServices
+    } // initStandaAloneServices
 
     // Initialize the ServerParams module, which loads the doradus.yaml file.
     private void initConfig(String[] args) {
         try {
             ServerParams.load(args);
             if (Utils.isEmpty(ServerParams.instance().getModuleParamString("DoradusServer", "super_user"))) {
-                m_logger.warn("'DoradusServer.super_user' parameter is not defined. " +
-                              "Privileged commands will be available without authentication.");
+                m_logger.warn("'DoradusServer.super_user' parameter is not defined. "
+                        + "Privileged commands will be available without authentication.");
             }
         } catch (ConfigurationException e) {
             throw new RuntimeException("Failed to initialize server configuration", e);
         }
-    }   // initConfig
-    
+    } // initConfig
+
     // Initialize the given list of services. Register initialized Service and
     // StorageService objects. Throw if a storage service is not requested.
     private void initServices(Set<String> serviceSet) {
@@ -372,28 +388,28 @@ public final class DoradusServer {
         if (m_storageServices.size() == 0) {
             throw new RuntimeException("No storage services were configured");
         }
-    }   // initServices
-    
+    } // initServices
+
     // Initialize the service with the given package name.
     private Service initService(String serviceName) {
         m_logger.debug("Initializing service: " + serviceName);
         try {
             @SuppressWarnings("unchecked")
             Class<Service> serviceClass = (Class<Service>) Class.forName(serviceName);
-            Method instanceMethod = serviceClass.getMethod("instance", (Class<?>[])null);
-            Service instance = (Service)instanceMethod.invoke(null, (Object[])null);
+            Method instanceMethod = serviceClass.getMethod("instance", (Class<?>[]) null);
+            Service instance = (Service) instanceMethod.invoke(null, (Object[]) null);
             instance.initialize();
             return instance;
         } catch (Exception e) {
             throw new RuntimeException("Error initializing service: " + serviceName, e);
         }
-    }   // initService
+    } // initService
 
     // Add required services, if missing, to the given list and return.
     private void addRequiredServices(Set<String> serviceSet) {
         serviceSet.addAll(Arrays.asList(REQUIRED_SERVICES));
-    }   // addRequiredServices
-    
+    } // addRequiredServices
+
     // Start the DoradusServer services.
     private void start() {
         if (m_bRunning) {
@@ -405,8 +421,8 @@ public final class DoradusServer {
         hookShutdownEvent();
         startServices();
         m_bRunning = true;
-    }   // start
-    
+    } // start
+
     // Start all registered services.
     private void startServices() {
         m_logger.info("Starting services: {}", simpleServiceNames(m_initializedServices));
@@ -415,9 +431,9 @@ public final class DoradusServer {
             service.start();
             m_startedServices.add(service);
         }
-    }   // startServices
-    
-    // Get simple service names as a comma-separated list. 
+    } // startServices
+
+    // Get simple service names as a comma-separated list.
     private String simpleServiceNames(Collection<Service> services) {
         StringBuilder buffer = new StringBuilder();
         for (Service service : services) {
@@ -427,7 +443,7 @@ public final class DoradusServer {
             buffer.append(service.getClass().getSimpleName());
         }
         return buffer.toString();
-    }   // simpleServiceNames
+    } // simpleServiceNames
 
     // Stop all registered services.
     private void stopServices() {
@@ -442,8 +458,8 @@ public final class DoradusServer {
         }
         m_initializedServices.clear();
         m_storageServices.clear();
-    }   // stopServices
-    
+    } // stopServices
+
     // Shutdown all services and terminate.
     private void stop() {
         if (m_bRunning) {
@@ -453,8 +469,8 @@ public final class DoradusServer {
             m_bRunning = false;
             m_bInitialized = false;
         }
-    }   // stop
-    
+    } // stop
+
     // Loop forever without consuming resources.
     private void waitForShutdown() {
         m_logger.info("Main thread waiting for shutdown notice");
@@ -467,6 +483,6 @@ public final class DoradusServer {
                 }
             }
         }
-    }   // waitForShutdown
+    } // waitForShutdown
 
-}   // class DoradusServer
+} // class DoradusServer

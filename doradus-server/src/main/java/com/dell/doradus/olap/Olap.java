@@ -49,7 +49,6 @@ import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.olap.OLAPService;
 import com.dell.doradus.service.schema.SchemaService;
-import com.dell.doradus.service.tenant.TenantService;
 import com.dell.doradus.utilities.Timer;
 
 
@@ -92,12 +91,12 @@ public class Olap {
 	 * Danger: only works for default keyspace
 	 */
 	public VDirectory createApplication(String appName) {
-        Tenant tenant = new Tenant(TenantService.instance().getDefaultTenantDef());
+        Tenant tenant = new Tenant();
         return createApplication(tenant, appName);
 	}
 	
 	public VDirectory createApplication(Tenant tenant, String appName) {
-	    DBService.instance(tenant).createStoreIfAbsent("OLAP", true);
+	    DBService.instance().createStoreIfAbsent("OLAP", true);
 	    VDirectory root = new VDirectory(tenant, "OLAP").getDirectoryCreate("applications").getDirectoryCreate(appName);
 	    synchronized (m_tenantAppRoots) {
 	        String tenantName = tenant.getName();
@@ -114,9 +113,7 @@ public class Olap {
 	// Returns $root/applications/<appName> from correct keyspace/OLAP CF
 	public VDirectory getRoot(ApplicationDefinition appDef) {
 	    VDirectory root = null;
-	    String tenantName = appDef.getTenantName();
-	    if(Utils.isEmpty(tenantName)) tenantName = TenantService.instance().getDefaultTenantName();
-	    //Tenant tenant = Tenant.getTenant(appDef);
+	    String tenantName = "Doradus";
 	    synchronized (m_tenantAppRoots) {
 	        Map<String, VDirectory> appRoots = m_tenantAppRoots.get(tenantName);
 	        if (appRoots == null) {
@@ -125,7 +122,7 @@ public class Olap {
 	        }
             root = appRoots.get(appDef.getAppName());
 	        if (root == null) {
-	    	    Tenant tenant = Tenant.getTenant(appDef);
+	    	    Tenant tenant = new Tenant();
 	            root = new VDirectory(tenant, "OLAP").getDirectory("applications").getDirectory(appDef.getAppName());
 	            assert root != null;
 	            appRoots.put(appDef.getAppName(), root);
@@ -146,8 +143,8 @@ public class Olap {
 	 * If tenant is null then default tenant is used.
 	 */
 	public ApplicationDefinition getApplicationDefinition(Tenant tenant, String applicationName) {
-		if(tenant == null) tenant = TenantService.instance().getDefaultTenant();
-		ApplicationDefinition appDef = SchemaService.instance().getApplication(tenant, applicationName);
+		if(tenant == null) tenant = new Tenant();
+		ApplicationDefinition appDef = SchemaService.instance().getApplication(applicationName);
 		return appDef;
 	}
 	
@@ -155,7 +152,7 @@ public class Olap {
 	    VDirectory root = getRoot(appDef);
 	    synchronized (m_tenantAppRoots) {
 	        root.delete();
-	        String tenantName = Tenant.getTenant(appDef).getName();
+	        String tenantName = "Doradus";
 	        Map<String, VDirectory> appRoots = m_tenantAppRoots.get(tenantName);
 	        if (appRoots != null) {
 	            appRoots.remove(appDef.getAppName());

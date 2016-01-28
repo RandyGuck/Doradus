@@ -30,7 +30,6 @@ import com.dell.doradus.common.Utils;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
-import com.dell.doradus.service.db.Tenant;
 
 /**
  * This class caches sharding information for sharded tables. For each sharded table, a
@@ -142,10 +141,9 @@ public class ShardCache {
     private void addShardStart(TableDefinition tableDef, int shardNumber, Date shardDate) {
         SpiderTransaction spiderTran = new SpiderTransaction();
         spiderTran.addShardStart(tableDef, shardNumber, shardDate);
-        Tenant tenant = Tenant.getTenant(tableDef);
-        DBTransaction dbTran = DBService.instance(tenant).startTransaction();
+        DBTransaction dbTran = DBService.instance().startTransaction();
         spiderTran.applyUpdates(dbTran);
-        DBService.instance(tenant).commit(dbTran);
+        DBService.instance().commit(dbTran);
         synchronized (this) {
             cacheShardValue(tableDef, shardNumber, shardDate);
         }
@@ -200,9 +198,8 @@ public class ShardCache {
             tableMap.put(tableName, shardMap);
         }
         
-        Tenant tenant = Tenant.getTenant(tableDef);
         String storeName = SpiderService.termsStoreName(tableDef);
-        for(DColumn col: DBService.instance(tenant).getAllColumns(storeName, SpiderTransaction.SHARDS_ROW_KEY)) {
+        for(DColumn col: DBService.instance().getAllColumns(storeName, SpiderTransaction.SHARDS_ROW_KEY)) {
             Integer shardNum = Integer.parseInt(col.getName());
             Date shardDate = new Date(Long.parseLong(col.getValue()));
             shardMap.put(shardNum, shardDate);

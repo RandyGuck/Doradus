@@ -218,9 +218,7 @@ public class ServerConfig {
     public String dbuser;
     public String dbpassword;
     // Doradus keyspace properties
-    public boolean multitenant_mode = false;
     public String keyspace = DEFAULT_KS_NAME;
-    public boolean disable_default_keyspace = false;
     // Miscellaneous Doradus server options:
     public int restport = DEFAULT_REST_PORT;
     public String restaddr;

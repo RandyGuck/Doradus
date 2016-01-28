@@ -34,7 +34,7 @@ public class ObjectUpdater {
         m_tableName = tableName;
         m_batch = batch;
         m_appDef = Spider3.instance().addDynamicFields(m_appDef);
-        m_service = DBService.instance(m_tenant);
+        m_service = DBService.instance();
         m_transaction = m_service.startTransaction();
         m_batchResult = new BatchResult();
     }
@@ -50,7 +50,7 @@ public class ObjectUpdater {
                 removeFieldValues(object);
             }
         }
-        DBService.instance(m_tenant).commit(m_transaction);
+        DBService.instance().commit(m_transaction);
         return m_batchResult;
     }
     

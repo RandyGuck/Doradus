@@ -15,7 +15,6 @@ import com.dell.doradus.search.SearchResultList;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DColumn;
 import com.dell.doradus.service.db.Tenant;
-import com.dell.doradus.service.tenant.TenantService;
 import com.dell.doradus.utilities.Timer;
 
 /**
@@ -54,23 +53,20 @@ public class Spider3 {
     
 
     public void createApplication(Tenant tenant, String application) {
-        DBService.instance(tenant).createStoreIfAbsent(application, true);
+        DBService.instance().createStoreIfAbsent(application, true);
     }
 
     public void deleteApplication(Tenant tenant, String application) {
-        DBService.instance(tenant).deleteStoreIfPresent(application);
+        DBService.instance().deleteStoreIfPresent(application);
     }
 
     public Tenant getTenant(ApplicationDefinition appDef) {
-        String tenantName = appDef.getTenantName();
-        if(tenantName == null) return TenantService.instance().getDefaultTenant();
-        else return new Tenant(TenantService.instance().getTenantDefinition(tenantName));
+        return new Tenant();
     }
     
     public ApplicationDefinition addDynamicFields(ApplicationDefinition appDef) {
-        Tenant tenant = getTenant(appDef);
         String store = appDef.getAppName();
-        for(DColumn column: DBService.instance(tenant).getAllColumns(store, "_fields")) {
+        for(DColumn column: DBService.instance().getAllColumns(store, "_fields")) {
             String[] nv = column.getName().split("/");
             String tableName = nv[0];
             String fieldName = nv[1];

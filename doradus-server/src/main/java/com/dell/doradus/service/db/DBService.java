@@ -16,15 +16,17 @@
 
 package com.dell.doradus.service.db;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
+import com.dell.doradus.common.Utils;
+import com.dell.doradus.core.ServerParams;
 import com.dell.doradus.service.Service;
 import com.dell.doradus.service.schema.SchemaService;
 import com.dell.doradus.service.taskmanager.TaskManagerService;
-import com.dell.doradus.service.tenant.TenantService;
 
 /**
  * Provides methods that access a persistence instance (i.e., database). Each object
@@ -32,6 +34,35 @@ import com.dell.doradus.service.tenant.TenantService;
  * a {@link Tenant} object that connects to the tenant's database.
  */
 public abstract class DBService extends Service {
+    private static final DBService INSTANCE;
+    static {
+        String dbServiceName = ServerParams.instance().getModuleParamString("DBService", "dbservice");
+        if (Utils.isEmpty(dbServiceName)) {
+            throw new RuntimeException("'DBService.dbservice' parameter is not defined.");
+        }
+        try {
+            // Find and call the constructor DBService(Tenant).
+            @SuppressWarnings("unchecked")
+            Class<DBService> serviceClass = (Class<DBService>) Class.forName(dbServiceName);
+            Constructor<DBService> constructor = serviceClass.getConstructor(Tenant.class);
+            INSTANCE = constructor.newInstance(new Tenant());
+            INSTANCE.initialize();
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Cannot load specified 'dbservice': " + dbServiceName, e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Could not load dbservice class '" + dbServiceName + "'", e);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException("Required constructor missing for dbservice class: " + dbServiceName, e);
+        } catch (SecurityException | InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException("Could not invoke constructor for dbservice class: " + dbServiceName, e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException("Could not invoke constructor for dbservice class: " + dbServiceName, e);
+        } catch (Throwable e) {
+            throw new RuntimeException("Failed to initialize DBService: " + dbServiceName, e);
+        }
+    }
+    
+    private final int db_connect_retry_wait_millis;
     // Tenant served by this DBObject:
     protected Tenant m_tenant;
     
@@ -46,29 +77,29 @@ public abstract class DBService extends Service {
      */
     protected DBService(Tenant tenant) {
         m_tenant = tenant;
-        addTenantDBParameters();
         m_startDelayMillis = 1000;
+        db_connect_retry_wait_millis =
+            ServerParams.instance().getModuleParamInt("DBService", "db_connect_retry_wait_millis", 5000);
     }
     
     /**
-     * Get the default {@link DBService} instance, which is the object that manages the
-     * default database. This method simply calls {@link DBManagerService#getDefaultDB()}.
+     * Get the singleton {@link DBService} instance.
      * 
      * @return  The default DBService object.
      */
     public static DBService instance() {
-        return DBManagerService.instance().getDefaultDB();
+        return INSTANCE;
     }
 
     /**
-     * Get the {@link DBService} instance that manages data for the given tenant. This
-     * method simply calls {@link DBManagerService#getTenantDB(Tenant)}.
+     * TODO: Remove
      * 
      * @param tenant    Existing or potentially new tenant.
      * @return          {@link DBService} instances that can manage the tenant's data.
+     * @deprecated Remove
      */
     public static DBService instance(Tenant tenant) {
-        return DBManagerService.instance().getTenantDB(tenant);
+        return INSTANCE;
     }
 
     //----- Public Service methods
@@ -81,7 +112,29 @@ public abstract class DBService extends Service {
     /**
      * This method is "final" in DBService and unneeded in subclasses.
      */
-    protected final void startService() {}
+    protected final void startService() {
+        m_logger.info("Starting DBService");
+
+        boolean bDBOpened = false;
+        while (!bDBOpened) {
+            try {
+                INSTANCE.start();
+                bDBOpened = true;
+            } catch (DBNotAvailableException e) {
+                // Fall through to retry.
+            } catch (Throwable e) {
+                throw new RuntimeException("Cannot start DBService", e);
+            }
+            if (!bDBOpened) {
+                m_logger.info("Database is not reachable. Waiting to retry");
+                try {
+                    Thread.sleep(db_connect_retry_wait_millis);
+                } catch (InterruptedException ex2) {
+                    // ignore
+                }
+            }
+        }
+    }
     
     /**
      * DBService subclasses should implement this method, disconnecting from the DB.
@@ -137,8 +190,7 @@ public abstract class DBService extends Service {
      */
     public static boolean isSystemTable(String storeName) {
         return storeName.equals(SchemaService.APPS_STORE_NAME) ||
-               storeName.equals(TaskManagerService.TASKS_STORE_NAME) ||
-               storeName.equals(TenantService.TENANTS_STORE_NAME);
+               storeName.equals(TaskManagerService.TASKS_STORE_NAME);
     }
     
     /**
@@ -327,26 +379,6 @@ public abstract class DBService extends Service {
             rows.add(new DRow(m_tenant, storeName, rowKey));
         }
         return rows;
-    }
-
-    //----- Private methods
-    
-    // As a Service, this object should already have parameters defined for the concrete
-    // DBService object from doradus.yaml. This method adds/overrides any parameters
-    // defined in the TenantDefinition.
-    private void addTenantDBParameters() {
-        if (m_tenant.getDefinition().getOptionMap("DBService") != null) {
-            addParams(m_tenant.getDBServiceParams());
-        }
-    }
-
-    // Add/override parameters defined for this DBService with those in the given map.
-    private void addParams(Map<String, Object> dbServiceParams) {
-        if (dbServiceParams != null) {
-            for (String paramName : dbServiceParams.keySet()) {
-                m_serviceParamMap.put(paramName, dbServiceParams.get(paramName));
-            }
-        }
     }
 
 }

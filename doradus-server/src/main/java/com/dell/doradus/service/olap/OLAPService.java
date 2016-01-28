@@ -132,7 +132,7 @@ public class OLAPService extends StorageService {
     public void initializeApplication(ApplicationDefinition oldAppDef,
                                       ApplicationDefinition appDef) {
         checkServiceState();
-        Tenant tenant = Tenant.getTenant(appDef);
+        Tenant tenant = new Tenant();
         m_olap.createApplication(tenant, appDef.getAppName());
     }   // initializeApplication
     

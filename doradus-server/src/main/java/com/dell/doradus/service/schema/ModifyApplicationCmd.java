@@ -40,7 +40,7 @@ public class ModifyApplicationCmd extends UNodeInCallback {
         Utils.require(inNode != null, "This command requires an input entity");
         String appName = m_request.getVariableDecoded("application");
         ApplicationDefinition currAppDef =
-            SchemaService.instance().getApplication(m_request.getTenant(), appName);
+            SchemaService.instance().getApplication(appName);
         if (currAppDef == null) {
             throw new NotFoundException("Unknown application: " + appName);
         }

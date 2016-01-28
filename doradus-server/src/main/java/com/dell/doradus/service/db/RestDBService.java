@@ -86,7 +86,6 @@ public class RestDBService extends Service {
         }
         
         @Override public UNode invokeUNodeOut() {
-            Tenant tenant = m_request.getTenant();
             ParsedQuery parsedQuery = new ParsedQuery(m_request.getVariable("params"));
             String store = parsedQuery.getString("store");
             String row = parsedQuery.getString("row");
@@ -98,9 +97,9 @@ public class RestDBService extends Service {
             Utils.require((start == null && end == null) || (columns == null), "Columns parameter cannot be used together with start/end parameters");
             List<DColumn> result = null;
             if(columns != null) {
-                result = DBService.instance(tenant).getColumns(store, row, Utils.split(columns, ','));
+                result = DBService.instance().getColumns(store, row, Utils.split(columns, ','));
             } else {
-                result = DBService.instance(tenant).getColumns(store, row, start, end, count);
+                result = DBService.instance().getColumns(store, row, start, end, count);
             }
             UNode node = UNode.createMapNode("columns");
             for(DColumn c: result) {
@@ -135,13 +134,12 @@ public class RestDBService extends Service {
         }
         
         @Override public UNode invokeUNodeOut() {
-            Tenant tenant = m_request.getTenant();
             ParsedQuery parsedQuery = new ParsedQuery(m_request.getVariable("params"));
             String store = parsedQuery.getString("store");
             String c = parsedQuery.get("c");
             int count = parsedQuery.getInt("count", 1024);
             parsedQuery.checkInvalidParameters();
-            List<String> result = DBService.instance(tenant).getRows(store, c, count);
+            List<String> result = DBService.instance().getRows(store, c, count);
             UNode node = UNode.createArrayNode("rows");
             for(String r: result) {
                 node.addValueNode("value", r);

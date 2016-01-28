@@ -69,11 +69,7 @@ public class CQLService extends CassandraService {
     public CQLService(Tenant tenant) {
         super(tenant);
         m_statementCache = new CQLStatementCache(tenant);
-        if (Utils.isEmpty(tenant.getNamespace())) {
-            m_keyspace = storeToCQLName(tenant.getName());
-        } else {
-            m_keyspace = storeToCQLName(tenant.getNamespace());
-        }
+        m_keyspace = storeToCQLName(tenant.getName());
         m_cluster = buildClusterSpecs();
         connectToCluster();
     }

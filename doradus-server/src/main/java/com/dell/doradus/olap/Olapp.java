@@ -114,7 +114,7 @@ public class Olapp {
 		m_builder.append("</table>\n\n");
 
 		//Fields to group by
-		ApplicationDefinition appDef = SchemaService.instance().getApplication(m_tenant, getApplication());
+		ApplicationDefinition appDef = SchemaService.instance().getApplication(getApplication());
 		TableDefinition tableDef = appDef.getTableDef(getTable());
 		
 		if(getLink() == null) {

@@ -19,7 +19,6 @@ import com.dell.doradus.search.query.AllQuery;
 import com.dell.doradus.search.query.Query;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DColumn;
-import com.dell.doradus.service.db.Tenant;
 
 public class Spider3Search {
 
@@ -79,7 +78,6 @@ public class Spider3Search {
         if(map.size() == 0) return;
         TableDefinition tableDef = fieldDef.getTableDef();
         ApplicationDefinition appDef = tableDef.getAppDef();
-        Tenant tenant = Spider3.instance().getTenant(tableDef.getAppDef());
         String store = appDef.getAppName();
         String table = tableDef.getTableName();
         String field = fieldDef.getName();
@@ -90,7 +88,7 @@ public class Spider3Search {
         else if(fieldDef.isCollection()) {
             if(map.size() < 10) {
                 for(String id: map.keySet()) {
-                    for(DColumn column: DBService.instance(tenant).getColumnSlice(store, row, id, id + "~")) {
+                    for(DColumn column: DBService.instance().getColumnSlice(store, row, id, id + "~")) {
                         String[] nv = Spider3.split(column.getName());
                         String value = nv[1];
                         SearchResult r = map.get(id);
@@ -101,7 +99,7 @@ public class Spider3Search {
                     }
                 }
             } else {
-                for(DColumn column: DBService.instance(tenant).getAllColumns(store, row)) {
+                for(DColumn column: DBService.instance().getAllColumns(store, row)) {
                     String[] nv = Spider3.split(column.getName());
                     String id = nv[0];
                     String value = nv[1];
@@ -115,7 +113,7 @@ public class Spider3Search {
             
         }
         else {
-            for(DColumn column: DBService.instance(tenant).getColumns(store, row, map.keySet())) {
+            for(DColumn column: DBService.instance().getColumns(store, row, map.keySet())) {
                 SearchResult r = map.get(column.getName());
                 if(r == null) continue;
                 r.scalars.put(field, column.getValue());
