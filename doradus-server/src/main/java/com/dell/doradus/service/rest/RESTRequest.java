@@ -277,6 +277,16 @@ public class RESTRequest {
         return m_request.getHeader(headerName);
     }   // getRequestHeader
     
+    /**
+     * Get the HttpServletRequest used to create this RESTRequest. This provides access to
+     * any other request parameters needed.
+     * 
+     * @return  HttpServletRequest containing all client request parameters.
+     */
+    public HttpServletRequest getHttpServletRequest() {
+        return m_request;
+    }
+    
     ///// Private methods
 
     // Extract convenience members, which could detect problems with input parameters.
