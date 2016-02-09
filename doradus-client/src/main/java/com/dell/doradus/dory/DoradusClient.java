@@ -26,7 +26,6 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 
-import com.dell.doradus.client.Credentials;
 import com.dell.doradus.client.RESTClient;
 import com.dell.doradus.common.ApplicationDefinition;
 import com.dell.doradus.common.ContentType;
@@ -54,19 +53,7 @@ public class DoradusClient implements AutoCloseable {
      * @param port  Doradus Server port number.
      */
     public DoradusClient(String host, int port) {
-        this(host, port, "", null, null);   
-    }
-    
-    /**
-     * Create a new DoradusClient that will communicate with the Doradus server using the given
-     * host and port and tenant credentials
-     * 
-     * @param host  Doradus Server host name or IP address.
-     * @param port  Doradus Server port number.
-     * @param credentials  Credentials for use with a Doradus application.
-     */   
-    public DoradusClient(String host, int port, Credentials credentials) {
-        this(host, port, "", credentials, null);            
+        this(host, port, "", null);   
     }
     
     /**
@@ -76,9 +63,8 @@ public class DoradusClient implements AutoCloseable {
      * @param applicationName
      * @return the instance of the DoradusClient session
      */
-    public static DoradusClient open(String host, int port, Credentials credentials, String applicationName) {  
-        DoradusClient doradusClient = new DoradusClient(host, port, null, credentials, applicationName);    
-        doradusClient.setCredentials(credentials);
+    public static DoradusClient open(String host, int port, String applicationName) {  
+        DoradusClient doradusClient = new DoradusClient(host, port, null, applicationName);    
         String storageService = lookupStorageServiceByApp(doradusClient.getRestClient(), applicationName);
         doradusClient.setStorageService(storageService);
         return doradusClient;
@@ -95,25 +81,6 @@ public class DoradusClient implements AutoCloseable {
         applicationName = appName;
         String storageService = lookupStorageServiceByApp(getRestClient(), applicationName);
         setStorageService(storageService);
-    }
-    
-    /**
-     * Set credentials for use with a Doradus application.
-     * @param credentials
-     */
-    public void setCredentials(Credentials credentials) {
-        restClient.setCredentials(credentials);
-    }   
-    
-    /**
-     * Set credentials such as tenant, username, password for use with a Doradus application.
-     * @param tenant tenant name
-     * @param username user name use when accessing applications within the specified tenant.
-     * @param userpassword user password
-     */
-    public void setCredentials(String tenant, String username, String userpassword) {
-        Credentials credentials = new Credentials(tenant, username, userpassword);
-        restClient.setCredentials(credentials);
     }
     
     /**
@@ -190,9 +157,8 @@ public class DoradusClient implements AutoCloseable {
      * @param port
      * @param applicationName
      */
-    private DoradusClient(String host, int port, String apiPrefix, Credentials credentials, String applicationName) {
+    private DoradusClient(String host, int port, String apiPrefix, String applicationName) {
         this.restClient = new RESTClient(host, port, "");
-        this.restClient.setCredentials(credentials);
         this.applicationName = applicationName;
         this.storageService = null;
         loadRESTRulesIfNotExist(restClient);

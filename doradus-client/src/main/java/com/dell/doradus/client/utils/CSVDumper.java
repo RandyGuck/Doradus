@@ -196,12 +196,9 @@ public class CSVDumper {
         display("   -compress [T|F]     Compress messages. Default is: {}", CSVConfig.DEFAULT_COMPRESS);
         display("   -host <host>        Doradus server host name. Default is: {}", CSVConfig.DEFAULT_HOST);
         display("   -id <name>          Column name of ID field. Default is: {}", CSVConfig.DEFAULT_ID_FIELD);
-        display("   -password <pw>      Password for tenant. Default is: {}", CSVConfig.DEFAULT_PASSWORD);
         display("   -port <port>        Doradus server port. Default is: {}", CSVConfig.DEFAULT_PORT);
         display("   -root <folder>      Root folder of CSV files. Default is: {}", CSVConfig.DEFAULT_ROOT);
         display("   -shard <name>       (OLAP only): Name of shard to load. Default is: {}", CSVConfig.DEFAULT_SHARD);
-        display("   -tenant <name>      Name of tenant to use. Default is: {}", CSVConfig.DEFAULT_TENANT);
-        display("   -user <ID>          User ID for tenant. Default is: {}", CSVConfig.DEFAULT_USER);
         display("   -workers <#>        # of worker threads. Default is: {}", CSVConfig.DEFAULT_WORKERS);
         display("Reads all records in all tables for the given OLAP or Spider application and dumps");
         display("them to CSV files found in 'root' folder. TLS options are also available.");
@@ -247,7 +244,6 @@ public class CSVDumper {
     private void loadSchema() {
         m_logger.info("Loading schema for application: {}", m_config.app);
         m_client = new Client(m_config.host, m_config.port, m_config.getTLSParams());
-        m_client.setCredentials(m_config.getCredentials());
         m_session = m_client.openApplication(m_config.app); // throws if unknown app
         m_appDef = m_session.getAppDef();
         if (m_config.optimize) {
@@ -431,7 +427,6 @@ public class CSVDumper {
             m_logger.info("Worker {}: Opening session to application: {}",
                            new Object[]{m_workerNo, m_config.app});
             Client client = new Client(m_config.host, m_config.port, m_config.getTLSParams());
-            client.setCredentials(m_config.getCredentials());
             m_session = client.openApplication(m_config.app);   // throws if unknown
             client.close();
         }   // constructor

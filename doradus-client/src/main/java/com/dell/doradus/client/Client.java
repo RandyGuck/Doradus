@@ -34,7 +34,7 @@ import com.dell.doradus.common.Utils;
 
 /**
  * Creates a REST API connection to a Doradus server and provides methods to access
- * specific datababase tenants, which are called "applications". Requests and responses
+ * specific instances, which are called "applications". Requests and responses
  * use plain old Java objects (POJOs) and hide the details of the REST API. There are two
  * basic ways to use the Client class:
  * <p>
@@ -182,14 +182,6 @@ public class Client implements AutoCloseable {
         m_restClient.setCompression(compression);
     }   // setCompression
     
-    /**
-     * Set the credentials to use for requests made via this client. When an 
-     * @param credentials
-     */
-    public void setCredentials(Credentials credentials) {
-        m_restClient.setCredentials(credentials);
-    }   // setCredentials
-    
     //----- Application session methods
     
     /**
@@ -221,13 +213,11 @@ public class Client implements AutoCloseable {
      * @see com.dell.doradus.client.SpiderSession
      */
     public static ApplicationSession openApplication(String appName, String host, int port,
-                                                     SSLTransportParameters sslParams,
-                                                     Credentials credentials) {
+                                                     SSLTransportParameters sslParams) {
         Utils.require(!Utils.isEmpty(appName), "appName");
         Utils.require(!Utils.isEmpty(host), "host");
 
         try (Client client = new Client(host, port, sslParams)) {
-            client.setCredentials(credentials);
             ApplicationDefinition appDef = client.getAppDef(appName);
             Utils.require(appDef != null, "Unknown application: %s", appName);
             RESTClient restClient = new RESTClient(client.m_restClient);
@@ -267,9 +257,9 @@ public class Client implements AutoCloseable {
      * Create a new application in the connected Doradus server as defined in the given
      * {@link ApplicationDefinition} object. If the given application already exists, its
      * schema is replaced with the given definition. If the application is new, it is
-     * created in the tenant defined by the current user credentials. The
-     * {@link ApplicationDefinition} for the same application is returned, updated with
-     * any system-assigned defaults. An exception is thrown if an error occurs.
+     * created. The {@link ApplicationDefinition} for the same application is returned,
+     * updated with any system-assigned defaults. An exception is thrown if an error
+     * occurs.
      * 
      * @param appDef    {@link ApplicationDefinition} of application to create or update.
      * @return          {@link ApplicationDefinition} of same application, updated with
@@ -327,8 +317,7 @@ public class Client implements AutoCloseable {
     }   // createdApplication
     
     /**
-     * Get the {@link ApplicationDefinition} for all applications defined in the tenant
-     * identified by this client's credentials.
+     * Get the {@link ApplicationDefinition} for all applications.
      * 
      * @return  A collection of all applications defined in the database, possible empty.
      */
@@ -390,10 +379,10 @@ public class Client implements AutoCloseable {
     }   // getAppDef
     
     /**
-     * Delete an existing application from the current Doradus tenant, including all of
-     * its tables and data. Because updates are idempotent, deleting an already-deleted
-     * application is acceptable. Hence, if no error is thrown, the result is always true.
-     * An exception is thrown if an error occurs.
+     * Delete an existing application, including all of its tables and data. Because
+     * updates are idempotent, deleting an already-deleted application is acceptable.
+     * Hence, if no error is thrown, the result is always true. An exception is thrown
+     * if an error occurs.
      * 
      * @param appName   Name of existing application to delete.
      * @param key       Key of application to delete. Can be null if the application has

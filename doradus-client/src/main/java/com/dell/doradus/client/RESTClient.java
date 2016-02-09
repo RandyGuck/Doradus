@@ -70,7 +70,6 @@ public class RESTClient implements Closeable {
     private OutputStream            m_outStream;
     private SSLTransportParameters  m_sslParams;
     private boolean                 m_bCompress;
-    private Credentials             m_credentials;
     
     // Current "Accept" format we use until changed.
     private ContentType m_acceptFormat = ContentType.APPLICATION_JSON;  // default
@@ -155,8 +154,6 @@ public class RESTClient implements Closeable {
         this(restClient.m_sslParams, restClient.m_host, restClient.m_port, restClient.m_apiPrefix);
         setAcceptType(restClient.m_acceptFormat);
         setCompression(restClient.m_bCompress);
-        setCredentials(restClient.m_credentials);
-        
     }   // constructor
     
     /**
@@ -174,15 +171,6 @@ public class RESTClient implements Closeable {
      * @return  True if compression is set for all message bodies.
      */
     public boolean getCompression() { return m_bCompress; }
-    
-    /**
-     * Get the credentials being used to authenticate requests made by this RESTClient. It
-     * may be null to indicate that requests are being made unauthenticated.
-     * 
-     * @return  {@link Credentials} being used to authorize requests made by this
-     *          RESTClient. May be null.
-     */
-    public Credentials getCredentials() { return m_credentials; }
     
     /**
      * Get the REST API host name/IP address used for this RESTClient connection.
@@ -221,16 +209,6 @@ public class RESTClient implements Closeable {
     public void setCompression(boolean bCompress) {
         m_bCompress = bCompress;
     }   // setCompression
-    
-    /**
-     * Set the credentials to be used for requests made through this RESTClient.
-     * 
-     * @param credentials {@link Credentials} to be used for future REST commands. If
-     *                    null is passed, no credentials will be used.
-     */
-    public void setCredentials(Credentials credentials) {
-        m_credentials = credentials;
-    }   // setCredentials
     
     /**
      * Send a REST command with the given method and URI (but no entityt) to the
@@ -335,19 +313,6 @@ public class RESTClient implements Closeable {
     
     //----- Private methods
     
-    // If credentials have been specified with a tenant, append then the query string
-    // "?tenant={tenant}" or "&tenant={tenant}" to the given URI.
-    private String addTenantParam(String uri) {
-        if (m_credentials != null && m_credentials.getTenant() != null) {
-            if (uri.indexOf("?") > 0) {
-                return uri + "&tenant=" + m_credentials.getTenant();
-            } else {
-                return uri + "?tenant=" + m_credentials.getTenant();
-            }
-        }
-        return uri;
-    }   // addTenantParam
-    
     // Attempt to reconnect to the Doradus server
     private void reconnect() throws IOException {
         // First ensure we're closed.
@@ -377,17 +342,11 @@ public class RESTClient implements Closeable {
         if (m_bCompress) {
             headers.put(HttpDefs.ACCEPT_ENCODING, "gzip");
         }
-        if (m_credentials != null) {
-            String authString =
-                "Basic " + Utils.base64FromString(m_credentials.getUserid() + ":" + m_credentials.getPassword());
-            headers.put("Authorization", authString);
-        }
         
         // Form the message header.
         StringBuilder buffer = new StringBuilder();
         buffer.append(method.toString());
         buffer.append(" ");
-        buffer.append(addTenantParam(uri));
         buffer.append(" HTTP/1.1\r\n");
         for (String name : headers.keySet()) {
             buffer.append(name);

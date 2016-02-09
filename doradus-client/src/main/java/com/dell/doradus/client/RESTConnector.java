@@ -40,7 +40,6 @@ import com.dell.doradus.common.ContentType;
 public class RESTConnector {
 	private ContentType m_defaultContentType = ContentType.APPLICATION_JSON;
 	private boolean m_defaultCompression = false;
-	private Credentials m_credentials;
 	
 	/**
 	 * Status of the connection (at the time it was created or refused to connect)
@@ -83,18 +82,6 @@ public class RESTConnector {
 	 */
 	public void setCompression(boolean compression) {
 		m_defaultCompression = compression;
-	}
-	
-	/**
-	 * Set the client authentication credentials used for all {@link RESTClient}s created
-	 * by this RESTConnector. If the given credentials are null, RESTClients will not use
-	 * authentication.
-	 * 
-	 * @param credentials  {@link Credentials} to use for RESTClients created by this
-	 *                     connector. Can be null to request unauthenticated connections.
-	 */
-	public void setCredentials(Credentials credentials) {
-	    m_credentials = credentials;
 	}
 	
 	/**
@@ -149,7 +136,6 @@ public class RESTConnector {
 		do {
 			try {
 				RESTClient client = new RESTClient(sslParams, m_cellRing.m_hostName, m_port);
-				client.setCredentials(m_credentials);
 				m_cellRing.m_hostStatus = new HostStatus();
 				client.setAcceptType(m_defaultContentType);
 				client.setCompression(m_defaultCompression);
