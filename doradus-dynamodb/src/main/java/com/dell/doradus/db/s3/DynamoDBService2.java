@@ -62,7 +62,6 @@ import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
 import com.dell.doradus.service.db.DRow;
 import com.dell.doradus.service.db.RowDelete;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.utilities.Timer;
 
 public class DynamoDBService2 extends DBService {
@@ -73,9 +72,7 @@ public class DynamoDBService2 extends DBService {
 	private long m_writeCapacityUnits;
     private AmazonDynamoDBClient m_client;
     
-    public DynamoDBService2(Tenant tenant) { 
-        super(tenant);
-        
+    public DynamoDBService2() { 
         String accessKey = getParamString("ddb-access-key");
         String secretKey = getParamString("ddb-secret-key");
         String endpoint = getParamString("ddb-endpoint");
@@ -99,7 +96,7 @@ public class DynamoDBService2 extends DBService {
 
     @Override
     public void createNamespace() {
-        String table = getTenant().getName();
+        String table = "Doradus";
         if(Tables.doesTableExist(m_client, table)) return;
         m_logger.info("Creating table: {}", table);
         CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(table)
@@ -130,7 +127,7 @@ public class DynamoDBService2 extends DBService {
     
     @Override
     public void dropNamespace() {
-        m_client.deleteTable(getTenant().getName());
+        m_client.deleteTable("Doradus");
     }
     
     @Override
@@ -140,7 +137,7 @@ public class DynamoDBService2 extends DBService {
 
     @Override
     public void deleteStoreIfPresent(String storeName) {
-    	DBTransaction dbTran = new DBTransaction(getTenant());
+    	DBTransaction dbTran = new DBTransaction();
     	for(DRow row: getAllRows(storeName)) {
     		dbTran.deleteRow(storeName, row.getKey());
     	}
@@ -189,13 +186,13 @@ public class DynamoDBService2 extends DBService {
     		commitPartial(list);
     	}
     	
-    	m_logger.debug("Committed transaction to {} in {}", getTenant().getName(), t);
+    	m_logger.debug("Committed transaction to {} in {}", "Doradus", t);
     }
 
     private void commitPartial(List<WriteRequest> list) {
     	Timer t = new Timer();
 		Map<String, List<WriteRequest>> map = new HashMap<>();
-		map.put(getTenant().getName(), list);
+		map.put("Doradus", list);
 		BatchWriteItemResult result = m_client.batchWriteItem(new BatchWriteItemRequest(map));
 		int retry = 0;
 		while(result.getUnprocessedItems().size() > 0) {
@@ -236,19 +233,19 @@ public class DynamoDBService2 extends DBService {
     	}
 
 		QueryRequest request = new QueryRequest()
-			.withTableName(getTenant().getName())
+			.withTableName("Doradus")
 			.withLimit(Math.min(100,  count))
 			.withKeyConditions(keyConditions);
 		QueryResult result = m_client.query(request);
 		List<DColumn> list = fromItems(result.getItems());
-        m_logger.debug("get columns range for {} in {}", getTenant().getName(), t);
+        m_logger.debug("get columns range for {} in {}", "Doradus", t);
     	return list;
     }
 
     @Override
     public List<DColumn> getColumns(String storeName, String rowKey, Collection<String> columnNames) {
     	Timer t = new Timer();
-    	String namespace = getTenant().getName();
+    	String namespace = "Doradus";
     	String key = storeName + "_" + rowKey;
     	List<DColumn> list = new ArrayList<>();
         
@@ -281,7 +278,7 @@ public class DynamoDBService2 extends DBService {
     @Override
     public List<String> getRows(String storeName, String continuationToken, int count) {
     	Timer t = new Timer();
-    	ScanRequest scanRequest = new ScanRequest(getTenant().getName());
+    	ScanRequest scanRequest = new ScanRequest("Doradus");
         scanRequest.setAttributesToGet(Arrays.asList("key")); // attributes to get
         //if (continuationToken != null) {
         //	scanRequest.setExclusiveStartKey(getPrimaryKey(storeName + "_" + continuationToken, "\u007F"));

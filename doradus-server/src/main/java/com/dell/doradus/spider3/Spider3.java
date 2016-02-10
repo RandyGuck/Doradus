@@ -14,7 +14,6 @@ import com.dell.doradus.logservice.LogQuery;
 import com.dell.doradus.search.SearchResultList;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DColumn;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.utilities.Timer;
 
 /**
@@ -52,18 +51,14 @@ public class Spider3 {
     }
     
 
-    public void createApplication(Tenant tenant, String application) {
+    public void createApplication(String application) {
         DBService.instance().createStoreIfAbsent(application, true);
     }
 
-    public void deleteApplication(Tenant tenant, String application) {
+    public void deleteApplication(String application) {
         DBService.instance().deleteStoreIfPresent(application);
     }
 
-    public Tenant getTenant(ApplicationDefinition appDef) {
-        return new Tenant();
-    }
-    
     public ApplicationDefinition addDynamicFields(ApplicationDefinition appDef) {
         String store = appDef.getAppName();
         for(DColumn column: DBService.instance().getAllColumns(store, "_fields")) {
@@ -99,15 +94,15 @@ public class Spider3 {
         return name + "\0" + value;
     }
     
-    public BatchResult addBatch(Tenant tenant, ApplicationDefinition appDef, String tableName, DBObjectBatch batch) {
+    public BatchResult addBatch(ApplicationDefinition appDef, String tableName, DBObjectBatch batch) {
         Timer t = new Timer();
-        ObjectUpdater updater = new ObjectUpdater(tenant, appDef, tableName, batch);
+        ObjectUpdater updater = new ObjectUpdater(appDef, tableName, batch);
         BatchResult batchResult = updater.update();
         m_logger.info("Added {} objects to {} in {}", new Object[] { batch.getObjectCount(), appDef.getAppName(), t.toString() });
         return batchResult;
     } 
     
-    public SearchResultList search(Tenant tenant, ApplicationDefinition appDef, String tableName, LogQuery query) {
+    public SearchResultList search(ApplicationDefinition appDef, String tableName, LogQuery query) {
         appDef = addDynamicFields(appDef);
         TableDefinition tableDef = appDef.getTableDef(tableName);
         Utils.require(tableDef != null, "Unknown table: " + tableName);

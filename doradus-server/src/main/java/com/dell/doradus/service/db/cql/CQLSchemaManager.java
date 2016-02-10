@@ -39,8 +39,8 @@ public class CQLSchemaManager {
     
     /**
      * Create a new keyspace with the given name. The keyspace is created with options
-     * defined for our DBService object, which come from doradus.yaml or a tenant
-     * definition or both. The keyspace is created with the following CQL command:
+     * defined for our DBService object, which come from doradus.yaml. The keyspace is
+     * created with the following CQL command:
      * <pre>
      *      CREATE KEYSPACE "<i>keyspace</i>" WITH <i>prop</i>=<i>value</i> AND ...;
      * </pre>
@@ -92,7 +92,7 @@ public class CQLSchemaManager {
     }   // createKeyspace
     
     /**
-     * Drop the keyspace for this DBService's tenant. The keyspace is dropped with the
+     * Drop the keyspace for this DBService. The keyspace is dropped with the
      * following CQL command:
      * <pre>
      *      DROP KEYSPACE "<i>keyspace</i>";

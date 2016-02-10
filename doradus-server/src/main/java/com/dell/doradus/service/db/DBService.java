@@ -29,9 +29,8 @@ import com.dell.doradus.service.schema.SchemaService;
 import com.dell.doradus.service.taskmanager.TaskManagerService;
 
 /**
- * Provides methods that access a persistence instance (i.e., database). Each object
- * manages data for a specific Tenant. Concrete must implement a construct that accepts
- * a {@link Tenant} object that connects to the tenant's database.
+ * Provides methods that access a persistence instance (i.e., database). Each subclass
+ * implements a connection to a specific kind of database.
  */
 public abstract class DBService extends Service {
     private static final DBService INSTANCE;
@@ -41,11 +40,11 @@ public abstract class DBService extends Service {
             throw new RuntimeException("'DBService.dbservice' parameter is not defined.");
         }
         try {
-            // Find and call the constructor DBService(Tenant).
+            // Find and call the constructor DBService().
             @SuppressWarnings("unchecked")
             Class<DBService> serviceClass = (Class<DBService>) Class.forName(dbServiceName);
-            Constructor<DBService> constructor = serviceClass.getConstructor(Tenant.class);
-            INSTANCE = constructor.newInstance(new Tenant());
+            Constructor<DBService> constructor = serviceClass.getConstructor();
+            INSTANCE = constructor.newInstance();
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Cannot load specified 'dbservice': " + dbServiceName, e);
         } catch (ClassNotFoundException e) {
@@ -62,20 +61,12 @@ public abstract class DBService extends Service {
     }
     
     private final int db_connect_retry_wait_millis;
-    // Tenant served by this DBObject:
-    protected Tenant m_tenant;
     
     /**
-     * Create a new DBService object for the given Tenant. In DBService subclasses, this
-     * this constructor should connect to the underlying database and throw an exception
-     * if the DB cannot be reached. The DBService parameters for the tenant are copied to
-     * the new object before the subclass's constructor is called, hence methods can be
-     * used such as {@link #getParam(String)}.
-     * 
-     * @param tenant    {@link Tenant} this DBService will serve. 
+     * Create a new DBService object. The constructor does little since the actual DB
+     * connection, if needed, is not made until {@link #initService()} is called.
      */
-    protected DBService(Tenant tenant) {
-        m_tenant = tenant;
+    protected DBService() {
         m_startDelayMillis = 1000;
         db_connect_retry_wait_millis =
             ServerParams.instance().getModuleParamInt("DBService", "db_connect_retry_wait_millis", 5000);
@@ -87,17 +78,6 @@ public abstract class DBService extends Service {
      * @return  The default DBService object.
      */
     public static DBService instance() {
-        return INSTANCE;
-    }
-
-    /**
-     * TODO: Remove
-     * 
-     * @param tenant    Existing or potentially new tenant.
-     * @return          {@link DBService} instances that can manage the tenant's data.
-     * @deprecated Remove
-     */
-    public static DBService instance(Tenant tenant) {
         return INSTANCE;
     }
 
@@ -118,6 +98,7 @@ public abstract class DBService extends Service {
         while (!bDBOpened) {
             try {
                 INSTANCE.start();
+                INSTANCE.createNamespace();
                 bDBOpened = true;
             } catch (DBNotAvailableException e) {
                 // Fall through to retry.
@@ -143,38 +124,15 @@ public abstract class DBService extends Service {
     //----- Public DBService methods: Namespace management
     
     /**
-     * Get the Tenant that this DBService manages data for.
-     * 
-     * @return  This DBService's {@link Tenant}.
-     */
-    public Tenant getTenant() {
-        return m_tenant;
-    }
-
-    /**
-     * Update this DBService's Tenant with the given one. This is called when the tenant's
-     * definition has been updated in an upward-compatible way, such as adding or removing
-     * users.
-     * 
-     * @param updatedTenant Updated {@link Tenant}.
-     */
-    public void updateTenant(Tenant updatedTenant) {
-        assert m_tenant.getName().equals(updatedTenant.getName());
-        m_tenant = updatedTenant;
-    }
-    
-    /**
-     * Create a new namespace for this DBService's Tenant. It is up to the concrete
+     * Create the namespace needed for this DBService, if any. It is up to the concrete
      * DBService class to decide what, if anything, should be done to prepare the new
-     * namespace. This method will throw if {@link #supportsNamespaces()} returns false
-     * for this DBService.
+     * namespace.
      */
     public abstract void createNamespace();
     
     /**
-     * Delete the namespace for this DBService's Tenant, including its applications and
-     * data. This method will throw if {@link #supportsNamespaces()} returns false for
-     * this DBService.
+     * Delete the namespace for this DBService, if any, including its applications and
+     * data.
      */
     public abstract void dropNamespace();
     
@@ -218,7 +176,7 @@ public abstract class DBService extends Service {
      * @return  New {@link DBTransaction}.
      */
     public DBTransaction startTransaction() {
-        return new DBTransaction(getTenant());
+        return new DBTransaction();
     }
     
     /**
@@ -307,7 +265,7 @@ public abstract class DBService extends Service {
      *                  iterator's hasNext() will be false.
      */
     public Iterable<DColumn> getColumnSlice(String storeName, String rowKey, String startCol, String endCol) {
-        DRow row = new DRow(m_tenant, storeName, rowKey);
+        DRow row = new DRow(storeName, rowKey);
         return row.getColumns(startCol, endCol, 1024);
     }
 
@@ -332,7 +290,7 @@ public abstract class DBService extends Service {
 
     public DColumn getLastColumn(String storeName, String rowKey, String startCol, String endCol) {
         DColumn lastCol = null;
-        DRow row = new DRow(m_tenant, storeName, rowKey);
+        DRow row = new DRow(storeName, rowKey);
         for(DColumn c: row.getColumns(startCol, endCol, 1024)) {
             lastCol = c;
         }
@@ -347,7 +305,7 @@ public abstract class DBService extends Service {
      * @return          {@link DRow} object. May be empty but not null.
      */
     public Iterable<DRow> getAllRows(String storeName) {
-        return new SequenceIterable<DRow>(new RowSequence(m_tenant, storeName, 65536));
+        return new SequenceIterable<DRow>(new RowSequence(storeName, 65536));
     }
     
     /**
@@ -360,7 +318,7 @@ public abstract class DBService extends Service {
      * @return          Iterator of {@link DRow} objects. May be empty but not null.
      */
     public DRow getRow(String storeName, String rowKey) {
-        return new DRow(m_tenant, storeName, rowKey);
+        return new DRow(storeName, rowKey);
     }
     
     /**
@@ -375,7 +333,7 @@ public abstract class DBService extends Service {
     public Iterable<DRow> getRows(String storeName, Collection<String> rowKeys) {
         List<DRow> rows = new ArrayList<>(rowKeys.size());
         for(String rowKey: rowKeys) {
-            rows.add(new DRow(m_tenant, storeName, rowKey));
+            rows.add(new DRow(storeName, rowKey));
         }
         return rows;
     }

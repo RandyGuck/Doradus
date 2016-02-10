@@ -40,7 +40,7 @@ public class DefineApplicationCmd extends UNodeInCallback {
         Utils.require(inNode != null, "This command requires an input entity");
         ApplicationDefinition appDef = new ApplicationDefinition();
         appDef.parse(inNode);
-        SchemaService.instance().defineApplication(m_request.getTenant(), appDef);
+        SchemaService.instance().defineApplication(appDef);
         return new RESTResponse(HttpCode.OK);
     }   // invokeUNodeIn
 

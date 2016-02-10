@@ -15,11 +15,9 @@ import com.dell.doradus.search.query.AllQuery;
 import com.dell.doradus.search.query.AndQuery;
 import com.dell.doradus.search.query.Query;
 import com.dell.doradus.search.query.RangeQuery;
-import com.dell.doradus.service.db.Tenant;
 
 public class SearchRequest {
     private LogQuery m_logQuery;
-    private Tenant m_tenant;
     private TableDefinition m_tableDef;
     private Query m_query;
     private int m_count;
@@ -32,15 +30,13 @@ public class SearchRequest {
     private long m_minTimestamp;
     private long m_maxTimestamp;
     
-    public SearchRequest(Tenant tenant, String application, String table, LogQuery logQuery) {
+    public SearchRequest(String application, String table, LogQuery logQuery) {
         m_logQuery = logQuery;
-        m_tenant = tenant;
-        m_tableDef = Searcher.getTableDef(tenant, application, table, logQuery.getPattern());
+        m_tableDef = Searcher.getTableDef(application, table, logQuery.getPattern());
         fillRequest();
     }
 
     public LogQuery getLogQuery() { return m_logQuery; }
-    public Tenant getTenant() { return m_tenant; }
     public TableDefinition getTableDef() { return m_tableDef; }
     public Query getQuery() { return m_query; }
     public int getCount() { return m_count; }

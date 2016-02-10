@@ -39,7 +39,6 @@ import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
 import com.dell.doradus.service.db.DRow;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.rest.RESTCallback;
 import com.dell.doradus.service.rest.RESTService;
 import com.dell.doradus.service.schema.SchemaService;
@@ -47,10 +46,10 @@ import com.dell.doradus.service.taskmanager.TaskRecord.TaskStatus;
 
 /**
  * Provides task execution service for Doradus. If this service is enabled, it looks for
- * tasks across all tenants and applications and executes them on schedule. Multiple
- * Doradus nodes may be executing in a cluster, each of which may have a TaskManager
- * service enabled. To prevent duplicate/overlapping executions of the same task, a simple
- * "claim" algorithm is used to ensure only one Doradus instance executes any given task.
+ * tasks across all applications and executes them on schedule. Multiple Doradus nodes may
+ * be executing in a cluster, each of which may have a TaskManager service enabled. To
+ * prevent duplicate/overlapping executions of the same task, a simple "claim" algorithm
+ * is used to ensure only one Doradus instance executes any given task.
  */
 public class TaskManagerService extends Service {
     // Tasks ColumnFamily name:
@@ -111,6 +110,7 @@ public class TaskManagerService extends Service {
     @Override
     protected void startService() {
         DBService.instance().waitForFullService();
+        DBService.instance().createStoreIfAbsent(TASKS_STORE_NAME, false);
         m_taskManager = new Thread("Task Manager") {
             @Override
             public void run() {
@@ -147,24 +147,22 @@ public class TaskManagerService extends Service {
      * Regardless of whether this or a remote task manager executes the task, this method
      * waits for that execution to complete and returns the final task status.
      *   
-     * @param appDef    {@link ApplicationDefinition} that defines the task's context
-     *                  including its tenant.
+     * @param appDef    {@link ApplicationDefinition} that defines the task's context.
      * @param task      Application-specific {@link Task} to execute.
      * @return          Final {@link TaskStatus} of the task's execution.
      */
     public TaskStatus executeTask(ApplicationDefinition appDef, Task task) {
         checkServiceState();
-        Tenant tenant = new Tenant();
-        m_logger.debug("Checking that task {} in tenant {} is not running", task.getTaskID(), tenant);
+        m_logger.debug("Checking that task {} is not running", task.getTaskID());
         TaskRecord taskRecord = null;
         synchronized (m_executeLock) {
-            taskRecord = waitForTaskStatus(tenant, task, s -> s != TaskStatus.IN_PROGRESS);
+            taskRecord = waitForTaskStatus(task, s -> s != TaskStatus.IN_PROGRESS);
             taskRecord.setStatus(TaskStatus.NEVER_EXECUTED);
-            updateTaskStatus(tenant, taskRecord, false);
+            updateTaskStatus(taskRecord, false);
             attemptToExecuteTask(appDef, task, taskRecord);
         }
-        m_logger.debug("Checking that task {} in tenant {} has completed", tenant, task.getTaskID());
-        taskRecord = waitForTaskStatus(tenant, task, s -> TaskStatus.isCompleted(s));
+        m_logger.debug("Checking that task {} has completed", task.getTaskID());
+        taskRecord = waitForTaskStatus(task, s -> TaskStatus.isCompleted(s));
         return taskRecord.getStatus();
     }
 
@@ -202,7 +200,7 @@ public class TaskManagerService extends Service {
      */
     void registerTaskStarted(Task task) {
         synchronized (m_activeTasks) {
-            String mapKey = createMapKey(task.getTenant(), task.getTaskID());
+            String mapKey = task.getTaskID();
             if (m_activeTasks.put(mapKey, task) != null) {
                 m_logger.warn("Task {} registered as started but was already running", mapKey);
             }
@@ -217,7 +215,7 @@ public class TaskManagerService extends Service {
      */
     void registerTaskEnded(Task task) {
         synchronized (m_activeTasks) {
-            String mapKey = createMapKey(task.getTenant(), task.getTaskID());
+            String mapKey = task.getTaskID();
             if (m_activeTasks.remove(mapKey) == null) {
                 m_logger.warn("Task {} registered as ended but was not running", mapKey);
             }
@@ -225,13 +223,12 @@ public class TaskManagerService extends Service {
     }
     
     /**
-     * Return all {@link TaskRecord}s stored in the Tasks table for the given tenant. This
+     * Return all {@link TaskRecord}s stored in the Tasks table. This
      * provides an account of all known tasks, past and present.
      * 
-     * @param tenant    {@link Tenant} to query.
      * @return          Collection of TaskRecords representing all known task statuses.
      */
-    Collection<TaskRecord> getTaskRecords(Tenant tenant) {
+    Collection<TaskRecord> getTaskRecords() {
         checkServiceState();
         List<TaskRecord> taskRecords = new ArrayList<>();
         for(DRow row: DBService.instance().getAllRows(TaskManagerService.TASKS_STORE_NAME)) {
@@ -250,14 +247,13 @@ public class TaskManagerService extends Service {
      * Add or update a task status record and optionally delete the task's claim record at
      * the same time.
      * 
-     * @param tenant                {@link Tenant} that owns the task's application.
      * @param taskRecord            {@link TaskRecord} containing task properties to be
      *                              written to the database. A null/empty property value
      *                              causes the corresponding column to be deleted.
      * @param bDeleteClaimRecord    True to delete the task's claim record in the same
      *                              transaction.
      */
-    void updateTaskStatus(Tenant tenant, TaskRecord taskRecord, boolean bDeleteClaimRecord) {
+    void updateTaskStatus(TaskRecord taskRecord, boolean bDeleteClaimRecord) {
         String taskID = taskRecord.getTaskID();
         DBTransaction dbTran = DBService.instance().startTransaction();
         Map<String, String> propMap = taskRecord.getProperties();
@@ -279,13 +275,13 @@ public class TaskManagerService extends Service {
 
     // Wait for the given task to achieve the given TaskStatus predicate, then return the
     // latest status record. If it has never run, a never-run task record is stored.
-    private TaskRecord waitForTaskStatus(Tenant tenant, Task task, Predicate<TaskStatus> pred) {
+    private TaskRecord waitForTaskStatus(Task task, Predicate<TaskStatus> pred) {
         TaskRecord taskRecord = null;
         while (true) {
             Iterator<DColumn> colIter =
                 DBService.instance().getAllColumns(TaskManagerService.TASKS_STORE_NAME, task.getTaskID()).iterator();
             if (!colIter.hasNext()) {
-                taskRecord = storeTaskRecord(tenant, task);
+                taskRecord = storeTaskRecord(task);
             } else {
                 taskRecord = buildTaskRecord(task.getTaskID(), colIter);
             }
@@ -312,36 +308,29 @@ public class TaskManagerService extends Service {
         m_executor.shutdown();
     }   // manageTasks
     
-    // Check all tenants for tasks that need execution.
+    // Check for tasks that need execution.
     private void checkAllTasks() {
-        Tenant tenant = new Tenant();
-        checkTenantTasks(tenant);
-    }   // checkAllTasks
-    
-    // Check the given tenant for tasks that need execution.
-    private void checkTenantTasks(Tenant tenant) {
-        m_logger.debug("Checking tenant '{}' for needy tasks", tenant);
+        m_logger.debug("Checking for needy tasks");
         try {
-            for (ApplicationDefinition appDef : SchemaService.instance().getAllApplications(tenant)) {
+            for (ApplicationDefinition appDef : SchemaService.instance().getAllApplications()) {
                 for (Task task : getAppTasks(appDef)) {
                     checkTaskForExecution(appDef, task);
                 }
             }
         } catch (Throwable e) {
-            m_logger.warn("Could not check tasks for tenant '{}': {}", tenant.getName(), e);
+            m_logger.warn("Could not check tasks: {}", e);
         }
-    }   // checkTenantTasks
+    }   // checkAllTasks
 
     // Check the given task to see if we should and can execute it.
     private void checkTaskForExecution(ApplicationDefinition appDef, Task task) {
-        Tenant tenant = new Tenant();
-        m_logger.debug("Checking task '{}' in tenant '{}'", task.getTaskID(), tenant);
+        m_logger.debug("Checking task '{}'", task.getTaskID());
         synchronized (m_executeLock) {
             Iterator<DColumn> colIter =
                 DBService.instance().getAllColumns(TaskManagerService.TASKS_STORE_NAME, task.getTaskID()).iterator();
             TaskRecord taskRecord = null;
             if (!colIter.hasNext()) {
-                taskRecord = storeTaskRecord(tenant, task);
+                taskRecord = storeTaskRecord(task);
             } else {
                 taskRecord = buildTaskRecord(task.getTaskID(), colIter);
             }
@@ -389,12 +378,11 @@ public class TaskManagerService extends Service {
     
     // Attempt to start the given task by creating claim and see if we win it.
     private void attemptToExecuteTask(ApplicationDefinition appDef, Task task, TaskRecord taskRecord) {
-        Tenant tenant = new Tenant();
         String taskID = taskRecord.getTaskID();
         String claimID = "_claim/" + taskID;
         long claimStamp = System.currentTimeMillis();
-        writeTaskClaim(tenant, claimID, claimStamp);
-        if (taskClaimedByUs(tenant, claimID)) {
+        writeTaskClaim(claimID, claimStamp);
+        if (taskClaimedByUs(claimID)) {
             startTask(appDef, task, taskRecord);
         } else {
         	m_logger.info("Will not start task: it was claimed by another service");
@@ -412,7 +400,7 @@ public class TaskManagerService extends Service {
     }   // startTask
 
     // Indicate if we won the claim to run the given task.
-    private boolean taskClaimedByUs(Tenant tenant, String claimID) {
+    private boolean taskClaimedByUs(String claimID) {
         waitForClaim();
         Iterator<DColumn> colIter =
             DBService.instance().getAllColumns(TaskManagerService.TASKS_STORE_NAME, claimID).iterator();
@@ -457,7 +445,7 @@ public class TaskManagerService extends Service {
     }   // waitForClaim
     
     // Write a claim record to the Tasks table.
-    private void writeTaskClaim(Tenant tenant, String claimID, long claimStamp) {
+    private void writeTaskClaim(String claimID, long claimStamp) {
         DBTransaction dbTran = DBService.instance().startTransaction();
         dbTran.addColumn(TaskManagerService.TASKS_STORE_NAME, claimID, m_hostClaimID, claimStamp);
         DBService.instance().commit(dbTran);
@@ -474,7 +462,7 @@ public class TaskManagerService extends Service {
     }   // buildTaskRecord
 
     // Create a TaskRecord for the given task and write it to the Tasks table.
-    private TaskRecord storeTaskRecord(Tenant tenant, Task task) {
+    private TaskRecord storeTaskRecord(Task task) {
         DBTransaction dbTran = DBService.instance().startTransaction();
         TaskRecord taskRecord = new TaskRecord(task.getTaskID());
         Map<String, String> propMap = taskRecord.getProperties();
@@ -503,27 +491,21 @@ public class TaskManagerService extends Service {
 
     // Look for tasks that have not reported or finished for too long.
     private void checkForDeadTasks() {
-        Tenant tenant = new Tenant();
-        checkForDeadTenantTasks(tenant);
-    }
-    
-    // Look for hung/abandoned tasks in the given tenant.
-    private void checkForDeadTenantTasks(Tenant tenant) {
-        m_logger.debug("Checking tenant {} for abandoned tasks", tenant);
+        m_logger.debug("Checking for abandoned tasks");
         try {
             for(DRow row: DBService.instance().getAllRows(TaskManagerService.TASKS_STORE_NAME)) {
                 TaskRecord taskRecord = buildTaskRecord(row.getKey(), row.getAllColumns(1024).iterator());
                 if (taskRecord.getStatus() == TaskStatus.IN_PROGRESS) {
-                    checkForDeadTask(tenant, taskRecord);
+                    checkForDeadTask(taskRecord);
                 }
             }
         } catch (Throwable e) {
-            m_logger.warn("Unable to check tenant '{}' for dead tasks: {}", tenant.getName(), e.toString());
+            m_logger.warn("Unable to check for dead tasks: {}", e.toString());
         }
     }
 
     // See if the given in-progress task may be hung or abandoned.
-    private void checkForDeadTask(Tenant tenant, TaskRecord taskRecord) {
+    private void checkForDeadTask(TaskRecord taskRecord) {
         Calendar lastReport = taskRecord.getTime(TaskRecord.PROP_PROGRESS_TIME);
         if (lastReport == null) {
             lastReport = taskRecord.getTime(TaskRecord.PROP_START_TIME);
@@ -532,10 +514,10 @@ public class TaskManagerService extends Service {
             }
         }
         long minsSinceLastActivity = (System.currentTimeMillis() - lastReport.getTimeInMillis()) / (1000 * 60);
-        if (isOurActiveTask(tenant, taskRecord.getTaskID())) {
-            checkForHungTask(tenant, taskRecord, minsSinceLastActivity);
+        if (isOurActiveTask(taskRecord.getTaskID())) {
+            checkForHungTask(taskRecord, minsSinceLastActivity);
         } else {
-            checkForAbandonedTask(tenant, taskRecord, minsSinceLastActivity);
+            checkForAbandonedTask(taskRecord, minsSinceLastActivity);
         }
     }
 
@@ -543,44 +525,39 @@ public class TaskManagerService extends Service {
     // a warning that the task may be hung. But let it continue running and prevent remote
     // task managers from marking it as dead by bumping its progress stamp. This blocks a
     // potentially harmful second task execution.
-    private void checkForHungTask(Tenant tenant, TaskRecord taskRecord, long minsSinceLastActivity) {
+    private void checkForHungTask(TaskRecord taskRecord, long minsSinceLastActivity) {
         if (minsSinceLastActivity > HUNG_TASK_THRESHOLD_MINS) {
-            String taskIdentity = createMapKey(tenant, taskRecord.getTaskID());
+            String taskIdentity = taskRecord.getTaskID();
             String reason = "No progress reported in " + minsSinceLastActivity + " minutes";
             m_logger.warn("Local task {} has not reported progress in {} minutes; " +
                           "restart the server if this continues for too long",
                           taskIdentity, minsSinceLastActivity);
             taskRecord.setProperty(TaskRecord.PROP_PROGRESS_TIME, Long.toString(System.currentTimeMillis()));
             taskRecord.setProperty(TaskRecord.PROP_PROGRESS, reason);
-            updateTaskStatus(tenant, taskRecord, false);
+            updateTaskStatus(taskRecord, false);
         }
     }
 
     // If the given remote task has not reported progress for DEAD_TASK_THRESHOLD_MINS,
     // assume the task's containing process has died and mark it as failed. This allows it
     // to restart upon the next check-tasks cycle.
-    private void checkForAbandonedTask(Tenant tenant, TaskRecord taskRecord, long minsSinceLastActivity) {
+    private void checkForAbandonedTask(TaskRecord taskRecord, long minsSinceLastActivity) {
         if (minsSinceLastActivity > DEAD_TASK_THRESHOLD_MINS) {
-            String taskIdentity = createMapKey(tenant, taskRecord.getTaskID());
+            String taskIdentity = taskRecord.getTaskID();
             String reason = "No progress reported in " + minsSinceLastActivity + " minutes";
             m_logger.error("Remote task {} has not reported progress in {} minutes; marking as failed",
                            taskIdentity, minsSinceLastActivity);
             taskRecord.setProperty(TaskRecord.PROP_FINISH_TIME, Long.toString(System.currentTimeMillis()));
             taskRecord.setProperty(TaskRecord.PROP_FAIL_REASON, reason);
             taskRecord.setStatus(TaskStatus.FAILED);
-            updateTaskStatus(tenant, taskRecord, true);
+            updateTaskStatus(taskRecord, true);
         }
     }
 
-    // Construct the map key used to track task executions we own.
-    private static String createMapKey(Tenant tenant, String taskID) {
-        return tenant.getName() + "/" + taskID;
-    }
-
     // Return true if we are currently executing the given task.
-    private boolean isOurActiveTask(Tenant tenant, String taskID) {
+    private boolean isOurActiveTask(String taskID) {
         synchronized (m_activeTasks) {
-            return m_activeTasks.containsKey(createMapKey(tenant, taskID));
+            return m_activeTasks.containsKey(taskID);
         }
     }
 

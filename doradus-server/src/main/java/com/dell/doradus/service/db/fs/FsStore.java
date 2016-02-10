@@ -30,11 +30,11 @@ public class FsStore {
     private List<FsTable> m_tables = new ArrayList<>();
     private Logger m_log = LoggerFactory.getLogger(getClass());
 
-    public FsStore(File tenant, String storeName) {
+    public FsStore(File parent, String storeName) {
         try {
             Timer t = new Timer();
             m_name = storeName;
-            m_root = new File(tenant, storeName);
+            m_root = new File(parent, storeName);
             if(!m_root.exists()) m_root.mkdir();
             m_logFile = new File(m_root, "Log");
             m_dataStore = new FsDataStore(m_root);

@@ -42,7 +42,6 @@ import com.dell.doradus.olap.aggregate.AggregateResultConverter;
 import com.dell.doradus.olap.aggregate.AggregationResult;
 import com.dell.doradus.search.SearchResultList;
 import com.dell.doradus.service.StorageService;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.rest.RESTCallback;
 import com.dell.doradus.service.rest.RESTService;
 import com.dell.doradus.service.rest.ReaderCallback;
@@ -99,7 +98,6 @@ public class LoggingService extends StorageService {
             Utils.require(reader != null, "This command requires an input entity");
             String application = m_request.getVariable("application");
             String table = m_request.getVariable("table");
-            Tenant tenant = m_request.getTenant();
             
             OlapBatch batch = null;
             if (m_request.getInputContentType().isJSON()) {
@@ -109,7 +107,7 @@ public class LoggingService extends StorageService {
                 batch = OlapBatch.fromUNode(rootNode, "Timestamp");
             }
             
-            LoggingService.instance().m_logService.addBatch(tenant, application, table, batch);
+            LoggingService.instance().m_logService.addBatch(application, table, batch);
             return new RESTResponse(HttpCode.OK,
                                     new BatchResult().toDoc().toString(m_request.getOutputContentType()),
                                     m_request.getOutputContentType());
@@ -141,10 +139,9 @@ public class LoggingService extends StorageService {
         @Override public UNode invokeUNodeOut() {
             ApplicationDefinition appDef = m_request.getAppDef();
             TableDefinition tableDef = m_request.getTableDef(appDef);
-            Tenant tenant = m_request.getTenant();
             String params = m_request.getVariable("params");    // leave encoded
             LogQuery logQuery = new LogQuery(params);
-            SearchResultList searchResult = LoggingService.instance().m_logService.search(tenant, appDef.getAppName(), tableDef.getTableName(), logQuery);
+            SearchResultList searchResult = LoggingService.instance().m_logService.search(appDef.getAppName(), tableDef.getTableName(), logQuery);
             return searchResult.toDoc();
         }
     }
@@ -169,10 +166,9 @@ public class LoggingService extends StorageService {
         @Override public UNode invokeUNodeOut() {
             ApplicationDefinition appDef = m_request.getAppDef();
             TableDefinition tableDef = m_request.getTableDef(appDef);
-            Tenant tenant = m_request.getTenant();
             String params = m_request.getVariable("params");    // leave encoded
             LogAggregate logAggregate = new LogAggregate(params);
-            AggregationResult result = LoggingService.instance().m_logService.aggregate(tenant, appDef.getAppName(), tableDef.getTableName(), logAggregate);
+            AggregationResult result = LoggingService.instance().m_logService.aggregate(appDef.getAppName(), tableDef.getTableName(), logAggregate);
             AggregateResult aresult = AggregateResultConverter.create(result, "COUNT(*)", logAggregate.getQuery(), logAggregate.getFields());
             return aresult.toDoc();
         }
@@ -196,7 +192,7 @@ public class LoggingService extends StorageService {
         @Override public RESTResponse invoke() {
             String params = m_request.getVariable("params");
             Map<String, String> parameters = Utils.parseURIQuery(params);
-            String html = LogServiceApp.process(m_request.getTenant(), LoggingService.instance().m_logService, parameters);
+            String html = LogServiceApp.process(LoggingService.instance().m_logService, parameters);
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(HttpDefs.CONTENT_TYPE, "text/html");
             return new RESTResponse(HttpCode.OK, Utils.toBytes(html), headers);
@@ -225,7 +221,7 @@ public class LoggingService extends StorageService {
     public void deleteApplication(ApplicationDefinition appDef) {
         checkServiceState();
         for(TableDefinition tableDef: appDef.getTableDefinitions().values()) {
-            m_logService.deleteTable(new Tenant(), appDef.getAppName(), tableDef.getTableName());
+            m_logService.deleteTable(appDef.getAppName(), tableDef.getTableName());
         }
     }
 
@@ -233,7 +229,7 @@ public class LoggingService extends StorageService {
     public void initializeApplication(ApplicationDefinition oldAppDef, ApplicationDefinition appDef) {
         checkServiceState();
         for(TableDefinition tableDef: appDef.getTableDefinitions().values()) {
-            m_logService.createTable(new Tenant(), appDef.getAppName(), tableDef.getTableName());
+            m_logService.createTable(appDef.getAppName(), tableDef.getTableName());
         }
     }
 

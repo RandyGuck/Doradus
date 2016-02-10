@@ -19,14 +19,12 @@ package com.dell.doradus.service.db;
 import java.util.List;
 
 public class RowSequence implements Sequence<DRow> {
-    private Tenant m_tenant;
     private String m_storeName;
     private int m_chunkSize;
     private List<String> m_currentList;
     private int m_pointer;
 
-    public RowSequence(Tenant tenant, String storeName, int chunkSize) {
-        m_tenant = tenant;
+    public RowSequence(String storeName, int chunkSize) {
         m_storeName = storeName;
         m_chunkSize = chunkSize;
     }
@@ -50,7 +48,7 @@ public class RowSequence implements Sequence<DRow> {
         if(m_pointer >= m_currentList.size()) {
             return null;
         }
-        return new DRow(m_tenant, m_storeName, m_currentList.get(m_pointer++));
+        return new DRow(m_storeName, m_currentList.get(m_pointer++));
     }
     
 }

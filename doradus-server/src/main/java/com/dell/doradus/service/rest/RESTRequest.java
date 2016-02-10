@@ -30,7 +30,6 @@ import com.dell.doradus.common.HttpDefs;
 import com.dell.doradus.common.HttpMethod;
 import com.dell.doradus.common.TableDefinition;
 import com.dell.doradus.common.Utils;
-import com.dell.doradus.service.db.Tenant;
 
 /**
  * Wrapper for an HTTP request (as an {@link HttpServletRequest} and the variables, if
@@ -42,7 +41,6 @@ public class RESTRequest {
     // Request members that this object wraps:
     private final HttpServletRequest    m_request;
     private final Map<String, String>   m_variableMap;
-    private final Tenant                m_tenant;
     private final ApplicationDefinition m_appDef;
 
     // Extracted members for easy access:
@@ -54,15 +52,13 @@ public class RESTRequest {
     /**
      * Create an object that wraps the given request parameters.
      *
-     * @param tenant        {@link Tenant} that defines this request's context (may be null).
      * @param appDef        {@link ApplicationDefinition} corresponding to this request's
      *                      {application}, if relevant, otherwise null.
      * @param request       Request as received by Servlet interface.
      * @param variableMap   Variables extracted from the REST URI (should be decoded).
      * @throws IOException 
      */
-    public RESTRequest(Tenant tenant, ApplicationDefinition appDef, HttpServletRequest request, Map<String, String> variableMap) {
-        m_tenant = tenant;
+    public RESTRequest(ApplicationDefinition appDef, HttpServletRequest request, Map<String, String> variableMap) {
         m_appDef = appDef;
         m_request = request;
         m_variableMap = variableMap;
@@ -108,16 +104,6 @@ public class RESTRequest {
         }
         return tableDef;
     }   // getTableDef
-    
-    /**
-     * Get the {@link Tenant} that defines the context for this request.
-     * 
-     * @return  This request's Tenant context, which defines the application(s) to which
-     *          the request will be applied.
-     */
-    public Tenant getTenant() {
-        return m_tenant;
-    }   // getTenant
     
     /**
      * Get the variables extracted for this REST request. For example, if the request has

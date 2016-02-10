@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import com.dell.doradus.common.ApplicationDefinition;
 import com.dell.doradus.common.Utils;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.taskmanager.TaskRecord.TaskStatus;
 
 /**
@@ -37,7 +36,6 @@ public abstract class Task implements Runnable {
     // Fixed parameters from constructor:
     protected final ApplicationDefinition m_appDef;
     protected final String m_appName;
-    protected final Tenant m_tenant;
     protected final String m_tableName;
     protected final String m_taskName;
     protected final TaskFrequency m_taskFreq;
@@ -64,7 +62,6 @@ public abstract class Task implements Runnable {
     public Task(ApplicationDefinition appDef, String tableName, String taskName, String taskFreq) {
         m_appDef = appDef;
         m_appName = appDef.getAppName();
-        m_tenant = new Tenant();
         m_tableName = Utils.isEmpty(tableName) ? "*" : tableName;
         m_taskName = taskName;
         m_taskFreq = new TaskFrequency(Utils.isEmpty(taskFreq) ? "1 MINUTE" : taskFreq);
@@ -110,7 +107,7 @@ public abstract class Task implements Runnable {
     @Override
     public final void run() {
         String taskID = m_taskRecord.getTaskID();
-        m_logger.debug("Starting task '{}' in tenant '{}'", taskID, m_tenant);
+        m_logger.debug("Starting task '{}'", taskID);
         try {
             TaskManagerService.instance().registerTaskStarted(this);
             m_lastProgressTimestamp = System.currentTimeMillis();
@@ -126,15 +123,6 @@ public abstract class Task implements Runnable {
         }
     }
 
-    /**
-     * Get the tenant that owns this task executor's application.
-     * 
-     * @return  {@link Tenant} for this task execution.
-     */
-    Tenant getTenant() {
-        return m_tenant;
-    }
-    
     /**
      * Get the frequency at which this task is defined to execute.
      * 
@@ -175,7 +163,7 @@ public abstract class Task implements Runnable {
         m_taskRecord.setProperty(TaskRecord.PROP_PROGRESS_TIME, null);
         m_taskRecord.setProperty(TaskRecord.PROP_FAIL_REASON, null);
         m_taskRecord.setStatus(TaskStatus.IN_PROGRESS);
-        TaskManagerService.instance().updateTaskStatus(m_tenant, m_taskRecord, false);
+        TaskManagerService.instance().updateTaskStatus(m_taskRecord, false);
     }
     
     // Update the job status record that shows this job has finished.
@@ -183,7 +171,7 @@ public abstract class Task implements Runnable {
         m_taskRecord.setProperty(TaskRecord.PROP_EXECUTOR, m_hostID);
         m_taskRecord.setProperty(TaskRecord.PROP_PROGRESS, m_progressMessage);
         m_taskRecord.setProperty(TaskRecord.PROP_PROGRESS_TIME, Long.toString(m_lastProgressTimestamp));
-        TaskManagerService.instance().updateTaskStatus(m_tenant, m_taskRecord, false);
+        TaskManagerService.instance().updateTaskStatus(m_taskRecord, false);
     }
     
     // Update the job status record that shows this job has finished.
@@ -191,7 +179,7 @@ public abstract class Task implements Runnable {
         m_taskRecord.setProperty(TaskRecord.PROP_EXECUTOR, m_hostID);
         m_taskRecord.setProperty(TaskRecord.PROP_FINISH_TIME, Long.toString(System.currentTimeMillis()));
         m_taskRecord.setStatus(TaskStatus.COMPLETED);
-        TaskManagerService.instance().updateTaskStatus(m_tenant, m_taskRecord, true);
+        TaskManagerService.instance().updateTaskStatus(m_taskRecord, true);
     }
     
     // Update the job status record that shows this job has failed.
@@ -200,7 +188,7 @@ public abstract class Task implements Runnable {
         m_taskRecord.setProperty(TaskRecord.PROP_FINISH_TIME, Long.toString(System.currentTimeMillis()));
         m_taskRecord.setProperty(TaskRecord.PROP_FAIL_REASON, reason);
         m_taskRecord.setStatus(TaskStatus.FAILED);
-        TaskManagerService.instance().updateTaskStatus(m_tenant, m_taskRecord, true);
+        TaskManagerService.instance().updateTaskStatus(m_taskRecord, true);
     }
     
 }   // class Task

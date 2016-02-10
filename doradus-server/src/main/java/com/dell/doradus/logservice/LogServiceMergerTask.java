@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 
 import com.dell.doradus.common.ApplicationDefinition;
 import com.dell.doradus.common.TableDefinition;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.taskmanager.Task;
 
 /**
@@ -36,19 +35,19 @@ public class LogServiceMergerTask extends Task {
 
     @Override
     public void execute() {
-        doTask(m_tenant, m_appDef, m_logger);
+        doTask(m_appDef, m_logger);
     }
 
-    public static void doTask(Tenant tenant, ApplicationDefinition appDef, Logger logger) {
+    public static void doTask(ApplicationDefinition appDef, Logger logger) {
         String application = appDef.getAppName();
-        logger.info("Merging logs for {}/{}", tenant.getName(), application);
+        logger.info("Merging logs for {}", application);
         LogService logService = LoggingService.instance().getLogService();
         for(TableDefinition tableDef: appDef.getTableDefinitions().values()) {
             boolean mergeDisabled = "false".equals(tableDef.getOption("merge"));
             if(mergeDisabled) continue;
-            List<String> partitions = logService.getPartitions(tenant, application, tableDef.getTableName());
+            List<String> partitions = logService.getPartitions(application, tableDef.getTableName());
             for(String partition: partitions) {
-                logService.mergePartition(tenant, application, tableDef.getTableName(), partition);
+                logService.mergePartition(application, tableDef.getTableName(), partition);
             }
             logger.info("Processed table {}",tableDef.getTableName());
         }

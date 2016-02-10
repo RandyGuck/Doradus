@@ -20,13 +20,11 @@ import java.util.Collection;
 
 import com.dell.doradus.common.HttpMethod;
 import com.dell.doradus.common.UNode;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.rest.UNodeOutCallback;
 import com.dell.doradus.service.rest.annotation.Description;
 
 /**
- * Handle the REST command: GET /_tasks. Lists recorded tasks for all applications in the
- * perspective tenant.
+ * Handle the REST command: GET /_tasks. Lists recorded tasks for all applications.
  */
 @Description(
     name = "ListTasks",
@@ -39,8 +37,7 @@ public class ListTasksCmd extends UNodeOutCallback {
 
     @Override
     public UNode invokeUNodeOut() {
-        Tenant tenant = m_request.getTenant();
-        Collection<TaskRecord> taskRecords = TaskManagerService.instance().getTaskRecords(tenant);
+        Collection<TaskRecord> taskRecords = TaskManagerService.instance().getTaskRecords();
         UNode result = UNode.createMapNode("tasks");
         for (TaskRecord taskRecord : taskRecords) {
             result.addChildNode(taskRecord.toDoc());

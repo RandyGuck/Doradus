@@ -49,7 +49,6 @@ import com.dell.doradus.service.StorageService;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DColumn;
 import com.dell.doradus.service.db.DRow;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.rest.RESTCallback;
 import com.dell.doradus.service.rest.RESTService;
 import com.dell.doradus.service.schema.SchemaService;
@@ -511,11 +510,10 @@ public class SpiderService extends StorageService {
     // Add an implicit table to the given application and return its new TableDefinition.
     private TableDefinition addAutoTable(ApplicationDefinition appDef, String tableName) {
         m_logger.debug("Adding implicit table '{}' to application '{}'", tableName, appDef.getAppName());
-        Tenant tenant = new Tenant();
         TableDefinition tableDef = new TableDefinition(appDef);
         tableDef.setTableName(tableName);
         appDef.addTable(tableDef);
-        SchemaService.instance().defineApplication(tenant, appDef);
+        SchemaService.instance().defineApplication(appDef);
         appDef = SchemaService.instance().getApplication(appDef.getAppName());
         return appDef.getTableDef(tableName);
     }   // addAutoTable

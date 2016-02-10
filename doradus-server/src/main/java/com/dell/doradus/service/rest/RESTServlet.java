@@ -40,7 +40,6 @@ import com.dell.doradus.common.Utils;
 import com.dell.doradus.core.DoradusServer;
 import com.dell.doradus.service.db.DBNotAvailableException;
 import com.dell.doradus.service.db.DuplicateException;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.db.UnauthorizedException;
 import com.dell.doradus.service.schema.SchemaService;
 
@@ -156,7 +155,6 @@ public class RESTServlet extends HttpServlet {
     private RESTResponse validateAndExecuteRequest(HttpServletRequest request) {
         Map<String, String> variableMap = new HashMap<String, String>();
         String query = extractQueryParam(request, variableMap);
-        Tenant tenant = getTenant(variableMap);
 
         // Command matching expects an encoded URI but without the servlet context, if any.
         String uri = request.getRequestURI();
@@ -164,7 +162,7 @@ public class RESTServlet extends HttpServlet {
         if (!Utils.isEmpty(context)) {
             uri = uri.substring(context.length());
         }
-        ApplicationDefinition appDef = getApplication(uri, tenant);
+        ApplicationDefinition appDef = getApplication(uri);
         
         HttpMethod method = HttpMethod.methodFromString(request.getMethod());
         if (method == null) {
@@ -177,12 +175,12 @@ public class RESTServlet extends HttpServlet {
         }
         
         RESTCallback callback = cmd.getNewCallback();
-        callback.setRequest(new RESTRequest(tenant, appDef, request, variableMap));
+        callback.setRequest(new RESTRequest(appDef, request, variableMap));
         return callback.invoke();
     }
     
     // Get the definition of the referenced application or null if there is none.
-    private ApplicationDefinition getApplication(String uri, Tenant tenant) {
+    private ApplicationDefinition getApplication(String uri) {
         if (uri.length() < 2 || uri.startsWith("/_")) {
             return null;    // Non-application request
         }
@@ -195,11 +193,6 @@ public class RESTServlet extends HttpServlet {
         return appDef;
     }
     
-    // Get the Tenant context for this command and multi-tenant configuration options.
-    private Tenant getTenant(Map<String, String> variableMap) {
-        return new Tenant();
-    }
-
     // Send the given response, which includes a response code and optionally a body
     // and/or additional response headers. If the body is non-empty, we automatically add
     // the Content-Length and a Content-Type of Text/plain.
@@ -230,8 +223,8 @@ public class RESTServlet extends HttpServlet {
         }
     }   // sendResponse
     
-    // Extract and return the query component of the given request, but move "api=x",
-    // "format=y", and "tenant=z", if present, to rest parameters.
+    // Extract and return the query component of the given request, but move "api=x" and
+    // "format=y", if present, to rest parameters.
     private String extractQueryParam(HttpServletRequest request, Map<String, String> restParams) {
         String query = request.getQueryString();
         if (Utils.isEmpty(query)) {
@@ -257,10 +250,6 @@ public class RESTServlet extends HttpServlet {
                 } else if (param.secondItemInPair.equalsIgnoreCase("json")) {
                     restParams.put("format", "application/json");
                 }
-                break;
-            case "tenant":
-                bRewrite = true;
-                restParams.put("tenant", param.secondItemInPair);
                 break;
             default:
                 unusedList.add(param);

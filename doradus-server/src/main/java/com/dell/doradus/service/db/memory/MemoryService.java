@@ -30,9 +30,10 @@ import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
 import com.dell.doradus.service.db.RowDelete;
-import com.dell.doradus.service.db.Tenant;
 
 public class MemoryService extends DBService {
+    private static final String NAMESPACE = "Doradus";
+    
 	public static class Row {
 		public String name;
 		public SortedMap<String, byte[]> columns = new TreeMap<>();
@@ -73,9 +74,7 @@ public class MemoryService extends DBService {
     // holds ALL data
     private final Map<String, Keyspace> m_Keyspaces = new HashMap<>();
     
-    public MemoryService(Tenant tenant) {
-        super(tenant);
-
+    public MemoryService() {
         m_logger.info("Using MEMORY API");
         m_logger.warn("Memory API is not persistent and can be used ONLY for testing purposes!");
     }
@@ -84,7 +83,7 @@ public class MemoryService extends DBService {
 
     @Override public void createNamespace() {
     	synchronized (m_sync) {
-    	    String namespace = getTenant().getName();
+    	    String namespace = NAMESPACE;
     		if(m_Keyspaces.get(namespace) != null) return;
     		Keyspace ks = new Keyspace(namespace);
     		m_Keyspaces.put(namespace, ks);
@@ -93,7 +92,7 @@ public class MemoryService extends DBService {
 
     @Override public void dropNamespace() {
     	synchronized (m_sync) {
-            String namespace = getTenant().getName();
+            String namespace = NAMESPACE;
     		if(m_Keyspaces.get(namespace) == null) return;
     		m_Keyspaces.remove(namespace);
 		}
@@ -111,7 +110,7 @@ public class MemoryService extends DBService {
 
     @Override public void createStoreIfAbsent(String storeName, boolean bBinaryValues) {
     	synchronized (m_sync) {
-    		Keyspace ks = m_Keyspaces.get(getTenant().getName());
+    		Keyspace ks = m_Keyspaces.get(NAMESPACE);
     		if(ks == null) throw new RuntimeException("Keyspace does not exist");
     		Store st = ks.stores.get(storeName);
     		if(st == null) ks.stores.put(storeName, new Store(storeName));
@@ -120,7 +119,7 @@ public class MemoryService extends DBService {
     
     @Override public void deleteStoreIfPresent(String storeName) {
     	synchronized (m_sync) {
-    		Keyspace ks = m_Keyspaces.get(getTenant().getName());
+    		Keyspace ks = m_Keyspaces.get(NAMESPACE);
     		if(ks == null) throw new RuntimeException("Keyspace does not exist");
     		Store st = ks.stores.get(storeName);
     		if(st != null) ks.stores.remove(storeName);
@@ -129,7 +128,7 @@ public class MemoryService extends DBService {
     
     @Override public void commit(DBTransaction dbTran) {
         synchronized(m_sync) {
-            String keyspace = dbTran.getTenant().getName();
+            String keyspace = NAMESPACE;
             Keyspace ks = m_Keyspaces.get(keyspace);
             if(ks == null) throw new RuntimeException("Keyspace " + keyspace + " does not exist");
             //1. update
@@ -191,7 +190,7 @@ public class MemoryService extends DBService {
     
     @Override public List<DColumn> getColumns(String storeName, String rowKey, String startColumn, String endColumn, int count) {
         synchronized (m_sync) {
-            Keyspace ks = getKeyspace(getTenant().getName());
+            Keyspace ks = getKeyspace(NAMESPACE);
             Store st = ks.stores.get(storeName);
             if(st == null) throw new RuntimeException("Store does not exist");
             List<DColumn> list = new ArrayList<>();
@@ -209,7 +208,7 @@ public class MemoryService extends DBService {
 
     @Override public List<DColumn> getColumns(String storeName, String rowKey, Collection<String> columnNames) {
         synchronized (m_sync) {
-            Keyspace ks = getKeyspace(getTenant().getName());
+            Keyspace ks = getKeyspace(NAMESPACE);
             Store st = ks.stores.get(storeName);
             if(st == null) throw new RuntimeException("Store does not exist");
             List<DColumn> list = new ArrayList<>();
@@ -227,7 +226,7 @@ public class MemoryService extends DBService {
     @Override public List<String> getRows(String storeName, String continuationToken, int count) {
         synchronized (m_sync) {
             List<String> list = new ArrayList<>();
-            Keyspace ks = getKeyspace(getTenant().getName());
+            Keyspace ks = getKeyspace(NAMESPACE);
             Store st = ks.stores.get(storeName);
             if(st == null) return list;
             for(Row row: st.rows.values()) {

@@ -9,27 +9,23 @@ import com.dell.doradus.logservice.ChunkInfo;
 import com.dell.doradus.logservice.ChunkReader;
 import com.dell.doradus.logservice.LogService;
 import com.dell.doradus.olap.io.BSTR;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.utilities.Timer;
 
 public class ChunkMerger {
     private static Logger LOG = LoggerFactory.getLogger("logservice.store.ChunkMerger");
     
     private LogService m_logService;
-    private Tenant m_tenant;
     private String m_application;
     private String m_table;
     private ChunkWriter m_writer;
     
-    public ChunkMerger(LogService logService, Tenant tenant, String application, String table) {
+    public ChunkMerger(LogService logService, String application, String table) {
         m_logService = logService;
-        m_tenant = tenant;
         m_application = application;
         m_table = table;
         m_writer = new ChunkWriter();
     }
     
-    public Tenant getTenant() { return m_tenant; }
     public String getApplication() { return m_application; }
     public String getTable() { return m_table; }
     
@@ -49,7 +45,7 @@ public class ChunkMerger {
         
         m_writer.create(size);
         
-        List<byte[]> datas = m_logService.readChunks(m_tenant, m_application, m_table, infos);
+        List<byte[]> datas = m_logService.readChunks(m_application, m_table, infos);
         
         for(int segment = 0; segment < infos.size(); segment++) {
             int docOffset = docOffsets[segment];

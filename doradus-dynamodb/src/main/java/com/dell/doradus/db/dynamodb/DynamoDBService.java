@@ -39,7 +39,6 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.DeleteTableRequest;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
-import com.amazonaws.services.dynamodbv2.model.ListTablesResult;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
@@ -51,7 +50,6 @@ import com.dell.doradus.common.Utils;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.utilities.Timer;
 
 /**
@@ -62,18 +60,14 @@ import com.dell.doradus.utilities.Timer;
  *     yet. This means something will probably blow-up when a row gets too large.
  * <li>When running in an EC2 instance, DynamoDB will throttle responses, throwing
  *     exceptions when bandwidth is exceed. The code to handle this is not well tested.
- * <li>DynamoDB does not support namespaces. Each tenant must be placed in a DynamoDB
- *     instance with unique credentials and/or a unique region. Calls to
- *     {@link #createNamespace()} or {@link #dropNamespace()} will throw an exception.
  * <li>Tables are created with an attribute named "_key" as the row (item) key. Only
  *     hash-only keys are currently used. The _key attribute is removed from query results
  *     since the row key is handled independently.
  * <li>DynamoDB doesn't seem to allow null string values, despite its documentation. So,
  *     we store "null" columns by storing the value {@link #NULL_COLUMN_MARKER}.
  * </ol>
- * Because of multi-tenancy, AWS SDK standard Java properties and environment variables
- * are not used to define DynamoDB parameters. Instead, parameters must be defined for
- * each tenant as follows:<p>
+ * AWS SDK standard Java properties and environment variables are not used to define
+ * DynamoDB parameters. Instead, parameters must be defined as follows:<p>
  * <ul>
  * <li>Credentials: These are required. There are two ways to define parameters that
  *     identify the AWS credentials to use:
@@ -115,14 +109,11 @@ public class DynamoDBService extends DBService {
     private final int m_retry_wait_millis;
     private final int m_max_commit_attempts;
     private final int m_max_read_attempts;
-    private final String m_tenantPrefix;
     
-    public DynamoDBService(Tenant tenant) {
-        super(tenant);
+    public DynamoDBService() {
         m_retry_wait_millis = getParamInt("retry_wait_millis", 5000);
         m_max_commit_attempts = getParamInt("max_commit_attempts", 10);
         m_max_read_attempts = getParamInt("max_read_attempts", 3);
-        m_tenantPrefix = Utils.isEmpty(tenant.getName()) ? "" : tenant.getName() + "_"; 
         
         m_ddbClient = new AmazonDynamoDBClient(getCredentials());
         setRegionOrEndPoint();
@@ -146,18 +137,7 @@ public class DynamoDBService extends DBService {
     
     @Override
     public void dropNamespace() {
-        if (m_tenantPrefix.length() == 0) {
-            m_logger.warn("Drop namespace not supported for legacy DynamoDB instances. "+
-                          "Tables for tenant {} must be deleted manually", m_tenant.getName());
-            return;
-        }
-        ListTablesResult tables = m_ddbClient.listTables();
-        List<String> tableNames = tables.getTableNames();
-        for (String tableName : tableNames) {
-            if (tableName.startsWith(m_tenantPrefix)) {
-                deleteTable(tableName);
-            }
-        }
+        m_logger.warn("Drop namespace not supported for DynamoDB instances.");
     }
     
     //----- Public DBService methods: Store management
@@ -347,9 +327,9 @@ public class DynamoDBService extends DBService {
 
     //----- Private methods
 
-    // Prefix store name with tenant prefix if any.
+    // Table name same as store name.
     private String storeToTableName(String storeName) {
-        return m_tenantPrefix + storeName;
+        return storeName;
     }
 
     // Set the AWS credentials in m_ddbClient
@@ -369,11 +349,11 @@ public class DynamoDBService extends DBService {
         
         String awsAccessKey = getParamString("aws_access_key");
         Utils.require(!Utils.isEmpty(awsAccessKey),
-                      "Either 'aws_profile' or 'aws_access_key' must be defined for tenant: " + m_tenant.getName());
+                      "Either 'aws_profile' or 'aws_access_key' must be defined");
         String awsSecretKey = getParamString("aws_secret_key");
         Utils.require(!Utils.isEmpty(awsSecretKey),
                       "'aws_secret_key' must be defined when 'aws_access_key' is defined. " +
-                      "'aws_profile' is preferred over aws_access_key/aws_secret_key. Tenant: " + m_tenant.getName());
+                      "'aws_profile' is preferred over aws_access_key/aws_secret_key.");
         return new BasicAWSCredentials(awsAccessKey, awsSecretKey);
     }
     
@@ -388,7 +368,7 @@ public class DynamoDBService extends DBService {
         } else {
             String ddbEndpoint = getParamString("ddb_endpoint");
             Utils.require(ddbEndpoint != null,
-                          "Either 'ddb_region' or 'ddb_endpoint' must be defined for tenant: " + m_tenant.getName());
+                          "Either 'ddb_region' or 'ddb_endpoint' must be defined");
             m_logger.info("Using endpoint: {}", ddbEndpoint);
             m_ddbClient.setEndpoint(ddbEndpoint);
         }

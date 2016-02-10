@@ -29,13 +29,11 @@ import com.dell.doradus.common.FieldDefinition;
 import com.dell.doradus.common.FieldType;
 import com.dell.doradus.common.TableDefinition;
 import com.dell.doradus.olap.aggregate.AggregationResult;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.olap.OLAPService;
 import com.dell.doradus.service.schema.SchemaService;
 
 // simple REST application based on OLAP
 public class Olapp {
-    private Tenant m_tenant;
     private Olap m_olap;
 	private Map<String, String> m_parameters;
 	private StringBuilder m_builder;
@@ -54,15 +52,14 @@ public class Olapp {
 		return value;
 	}
 	
-	public Olapp(Tenant tenant, Olap olap, Map<String, String> parameters) {
-	    m_tenant = tenant;
+	public Olapp(Olap olap, Map<String, String> parameters) {
 	    m_olap = olap;
 	    m_parameters = parameters;
 	    m_builder = new StringBuilder();
 	}
 	
-	public static String process(Tenant tenant, Olap olap, Map<String, String> parameters) {
-	    Olapp olapp = new Olapp(tenant, olap, parameters);
+	public static String process(Olap olap, Map<String, String> parameters) {
+	    Olapp olapp = new Olapp(olap, parameters);
 	    return olapp.process();
 	}
 	
@@ -77,7 +74,7 @@ public class Olapp {
 	}
 	
 	private String processGetApplications() {
-	    List<ApplicationDefinition> appDefs = OLAPService.instance().getAllOLAPApplications(m_tenant);
+	    List<ApplicationDefinition> appDefs = OLAPService.instance().getAllOLAPApplications();
 		m_builder.append("<html><body><table border='1'>");
 		addHeader("Applications", "Shards", "Tables");
 		for(ApplicationDefinition appDef : appDefs) {

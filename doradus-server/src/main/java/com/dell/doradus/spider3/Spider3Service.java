@@ -35,7 +35,6 @@ import com.dell.doradus.common.rest.RESTParameter;
 import com.dell.doradus.logservice.LogQuery;
 import com.dell.doradus.search.SearchResultList;
 import com.dell.doradus.service.StorageService;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.rest.RESTCallback;
 import com.dell.doradus.service.rest.RESTService;
 import com.dell.doradus.service.rest.ReaderCallback;
@@ -79,7 +78,6 @@ public class Spider3Service extends StorageService {
             Utils.require(reader != null, "This command requires an input entity");
             ApplicationDefinition appDef = m_request.getAppDef();
             String table = m_request.getVariable("table");
-            Tenant tenant = m_request.getTenant();
             DBObjectBatch batch = new DBObjectBatch();
             if (m_request.getInputContentType().isJSON()) {
                 batch.parseJSON(reader);
@@ -87,7 +85,7 @@ public class Spider3Service extends StorageService {
                 UNode rootNode = UNode.parse(reader, m_request.getInputContentType());
                 batch.parse(rootNode);
             }
-            BatchResult result = Spider3.instance().addBatch(tenant, appDef, table, batch);
+            BatchResult result = Spider3.instance().addBatch(appDef, table, batch);
             return new RESTResponse(HttpCode.OK,
                                     result.toDoc().toString(m_request.getOutputContentType()),
                                     m_request.getOutputContentType());
@@ -119,10 +117,9 @@ public class Spider3Service extends StorageService {
         @Override public UNode invokeUNodeOut() {
             ApplicationDefinition appDef = m_request.getAppDef();
             TableDefinition tableDef = m_request.getTableDef(appDef);
-            Tenant tenant = m_request.getTenant();
             String params = m_request.getVariable("params");    // leave encoded
             LogQuery logQuery = new LogQuery(params);
-            SearchResultList searchResult = Spider3.instance().search(tenant, appDef, tableDef.getTableName(), logQuery);
+            SearchResultList searchResult = Spider3.instance().search(appDef, tableDef.getTableName(), logQuery);
             return searchResult.toDoc();
         }
     }
@@ -148,10 +145,9 @@ public class Spider3Service extends StorageService {
             throw new RuntimeException("Not implemented");
             //ApplicationDefinition appDef = m_request.getAppDef();
             //TableDefinition tableDef = m_request.getTableDef(appDef);
-            //Tenant tenant = m_request.getTenant();
             //String params = m_request.getVariable("params");    // leave encoded
             //LogAggregate logAggregate = new LogAggregate(params);
-            //AggregationResult result = Spider3Service.instance().m_logService.aggregate(tenant, appDef.getAppName(), tableDef.getTableName(), logAggregate);
+            //AggregationResult result = Spider3Service.instance().m_logService.aggregate(appDef.getAppName(), tableDef.getTableName(), logAggregate);
             //AggregateResult aresult = AggregateResultConverter.create(result, "COUNT(*)", logAggregate.getQuery(), logAggregate.getFields());
             //return aresult.toDoc();
         }
@@ -173,13 +169,13 @@ public class Spider3Service extends StorageService {
     @Override
     public void deleteApplication(ApplicationDefinition appDef) {
         checkServiceState();
-        Spider3.instance().deleteApplication(new Tenant(), appDef.getAppName());
+        Spider3.instance().deleteApplication(appDef.getAppName());
     }
 
     @Override
     public void initializeApplication(ApplicationDefinition oldAppDef, ApplicationDefinition appDef) {
         checkServiceState();
-        Spider3.instance().createApplication(new Tenant(), appDef.getAppName());
+        Spider3.instance().createApplication(appDef.getAppName());
     }
 
     @Override

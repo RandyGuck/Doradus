@@ -46,7 +46,6 @@ import com.dell.doradus.olap.store.SegmentStats;
 import com.dell.doradus.search.SearchResultList;
 import com.dell.doradus.search.util.LRUCache;
 import com.dell.doradus.service.db.DBService;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.olap.OLAPService;
 import com.dell.doradus.service.schema.SchemaService;
 import com.dell.doradus.utilities.Timer;
@@ -76,7 +75,7 @@ public class Olap {
     private static ExecutorService search_executor =
             olap_search_threads == 0 ? null : Executors.newFixedThreadPool(olap_search_threads);
 	
-    private Map<String, Map<String, VDirectory>> m_tenantAppRoots = new HashMap<>();
+    private Map<String, VDirectory> m_appRoots = new HashMap<>();
 	private FieldsCache m_fieldsCache =
 	        new FieldsCache(OLAPService.instance().getParamInt("olap_cache_size_mb", 100) * 1024L * 1024);
 	private LRUCache<String, CubeSearcher> m_cachedSearchers =
@@ -87,25 +86,11 @@ public class Olap {
 	
 	public static ExecutorService getSearchThreadPool() { return search_executor; }
 	
-	/**
-	 * Danger: only works for default keyspace
-	 */
 	public VDirectory createApplication(String appName) {
-        Tenant tenant = new Tenant();
-        return createApplication(tenant, appName);
-	}
-	
-	public VDirectory createApplication(Tenant tenant, String appName) {
 	    DBService.instance().createStoreIfAbsent("OLAP", true);
-	    VDirectory root = new VDirectory(tenant, "OLAP").getDirectoryCreate("applications").getDirectoryCreate(appName);
-	    synchronized (m_tenantAppRoots) {
-	        String tenantName = tenant.getName();
-	        Map<String, VDirectory> appRoots = m_tenantAppRoots.get(tenantName);
-	        if (appRoots == null) {
-	            appRoots = new HashMap<>();
-	            m_tenantAppRoots.put(tenantName, appRoots);
-	        }
-	        appRoots.put(appName, root);
+	    VDirectory root = new VDirectory("OLAP").getDirectoryCreate("applications").getDirectoryCreate(appName);
+	    synchronized (m_appRoots) {
+	        m_appRoots.put(appName, root);
 	    }
 	    return root;
 	}
@@ -113,19 +98,12 @@ public class Olap {
 	// Returns $root/applications/<appName> from correct keyspace/OLAP CF
 	public VDirectory getRoot(ApplicationDefinition appDef) {
 	    VDirectory root = null;
-	    String tenantName = "Doradus";
-	    synchronized (m_tenantAppRoots) {
-	        Map<String, VDirectory> appRoots = m_tenantAppRoots.get(tenantName);
-	        if (appRoots == null) {
-	            appRoots = new HashMap<>();
-	            m_tenantAppRoots.put(tenantName, appRoots);
-	        }
-            root = appRoots.get(appDef.getAppName());
+	    synchronized (m_appRoots) {
+            root = m_appRoots.get(appDef.getAppName());
 	        if (root == null) {
-	    	    Tenant tenant = new Tenant();
-	            root = new VDirectory(tenant, "OLAP").getDirectory("applications").getDirectory(appDef.getAppName());
+	            root = new VDirectory("OLAP").getDirectory("applications").getDirectory(appDef.getAppName());
 	            assert root != null;
-	            appRoots.put(appDef.getAppName(), root);
+	            m_appRoots.put(appDef.getAppName(), root);
 	        }
 	    }
 	    return root;
@@ -139,24 +117,16 @@ public class Olap {
         return segmentDir;
 	}
 	
-	/**
-	 * If tenant is null then default tenant is used.
-	 */
-	public ApplicationDefinition getApplicationDefinition(Tenant tenant, String applicationName) {
-		if(tenant == null) tenant = new Tenant();
+	public ApplicationDefinition getApplicationDefinition(String applicationName) {
 		ApplicationDefinition appDef = SchemaService.instance().getApplication(applicationName);
 		return appDef;
 	}
 	
 	public void deleteApplication(ApplicationDefinition appDef) {
 	    VDirectory root = getRoot(appDef);
-	    synchronized (m_tenantAppRoots) {
+	    synchronized (m_appRoots) {
 	        root.delete();
-	        String tenantName = "Doradus";
-	        Map<String, VDirectory> appRoots = m_tenantAppRoots.get(tenantName);
-	        if (appRoots != null) {
-	            appRoots.remove(appDef.getAppName());
-	        }
+	        m_appRoots.remove(appDef.getAppName());
 	    }
 	}
 

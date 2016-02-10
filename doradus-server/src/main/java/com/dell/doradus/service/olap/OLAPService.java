@@ -45,7 +45,6 @@ import com.dell.doradus.olap.store.CubeSearcher;
 import com.dell.doradus.olap.store.SegmentStats;
 import com.dell.doradus.search.SearchResultList;
 import com.dell.doradus.service.StorageService;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.rest.RESTCallback;
 import com.dell.doradus.service.rest.RESTService;
 import com.dell.doradus.service.schema.SchemaService;
@@ -132,8 +131,7 @@ public class OLAPService extends StorageService {
     public void initializeApplication(ApplicationDefinition oldAppDef,
                                       ApplicationDefinition appDef) {
         checkServiceState();
-        Tenant tenant = new Tenant();
-        m_olap.createApplication(tenant, appDef.getAppName());
+        m_olap.createApplication(appDef.getAppName());
     }   // initializeApplication
     
     @Override
@@ -228,15 +226,14 @@ public class OLAPService extends StorageService {
     /**
      * Perform the given OLAP browser (_olapp) command.
      * 
-     * @param tenant        Tenant context for command.
      * @param parameters    OLAP browser parameters. Should be empty to start the browser
      *                      at the home page.
      * @return              An HTML-formatted page containing the results of the given
      *                      OLAP browser command.
      */
-    public String browseOlapp(Tenant tenant, Map<String, String> parameters) {
+    public String browseOlapp(Map<String, String> parameters) {
         checkServiceState();
-        return Olapp.process(tenant, m_olap, parameters);
+        return Olapp.process(m_olap, parameters);
     }   // browseOlapp
     
     /**
@@ -252,16 +249,15 @@ public class OLAPService extends StorageService {
     }   // deleteShard
 
     /**
-     * Get a list of {@link ApplicationDefinition}s that are assigned to the OLAP service
-     * for the given tenant. An empty list is returned if there are no OLAP applications.
+     * Get a list of {@link ApplicationDefinition}s that are assigned to the OLAP service.
+     * An empty list is returned if there are no OLAP applications.
      * 
-     * @param   tenant  {@link Tenant} that owns the OLAP applications.
      * @return  A list of {@link ApplicationDefinition}s that are assigned to the OLAP
      *          service.
      */
-    public List<ApplicationDefinition> getAllOLAPApplications(Tenant tenant) {
+    public List<ApplicationDefinition> getAllOLAPApplications() {
         List<ApplicationDefinition> appDefs = new ArrayList<>();
-        for (ApplicationDefinition appDef : SchemaService.instance().getAllApplications(tenant)) {
+        for (ApplicationDefinition appDef : SchemaService.instance().getAllApplications()) {
             if (appDef.getStorageService().startsWith("OLAP")) {
                 appDefs.add(appDef);
             }

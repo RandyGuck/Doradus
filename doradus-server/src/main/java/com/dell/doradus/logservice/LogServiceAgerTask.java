@@ -26,7 +26,6 @@ import com.dell.doradus.common.CommonDefs;
 import com.dell.doradus.common.RetentionAge;
 import com.dell.doradus.common.TableDefinition;
 import com.dell.doradus.common.Utils;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.taskmanager.Task;
 
 /**
@@ -40,12 +39,12 @@ public class LogServiceAgerTask extends Task {
 
     @Override
     public void execute() {
-        LogServiceAgerTask.doTask(m_tenant, m_appDef, m_logger);
+        LogServiceAgerTask.doTask(m_appDef, m_logger);
     }
     
-    public static void doTask(Tenant tenant, ApplicationDefinition appDef, Logger logger) {
+    public static void doTask(ApplicationDefinition appDef, Logger logger) {
         String application = appDef.getAppName();
-        logger.info("Checking expired logs for {}/{}", tenant.getName(), application);
+        logger.info("Checking expired logs for {}", application);
         LogService logService = LoggingService.instance().getLogService();
         for(TableDefinition tableDef: appDef.getTableDefinitions().values()) {
             String retentionAgeStr = tableDef.getOption(CommonDefs.OPT_RETENTION_AGE);
@@ -54,7 +53,7 @@ public class LogServiceAgerTask extends Task {
             GregorianCalendar cal = retentionAge.getExpiredDate(new GregorianCalendar(TimeZone.getTimeZone("GMT")));
             logger.info("Deleting logs before {}", Utils.formatDate(cal));
             long timestamp = cal.getTimeInMillis();
-            logService.deleteOldSegments(tenant, application, tableDef.getTableName(), timestamp);
+            logService.deleteOldSegments(application, tableDef.getTableName(), timestamp);
             logger.info("Processed table {}",tableDef.getTableName());
         }
     }

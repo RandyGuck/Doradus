@@ -22,8 +22,6 @@ package com.dell.doradus.service.db;
  */
 public abstract class CassandraService extends DBService {
     
-    protected CassandraService(Tenant tenant) {
-        super(tenant);
-    }
+    protected CassandraService() { }
 
 }

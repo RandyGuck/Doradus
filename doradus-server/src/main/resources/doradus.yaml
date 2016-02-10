@@ -56,6 +56,7 @@ CassandraService:
     dbtls: false
     dbtls_cipher_suites: [TLS_RSA_WITH_AES_128_CBC_SHA]
     dbuser: cassandra
+    keyspace_name: Doradus
     keystore: config/keystore
     keystorepassword: changeit
     ks_defaults:

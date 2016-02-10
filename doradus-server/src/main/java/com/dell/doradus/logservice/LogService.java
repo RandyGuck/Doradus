@@ -15,17 +15,16 @@ import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
 import com.dell.doradus.service.db.DRow;
-import com.dell.doradus.service.db.Tenant;
 
 public class LogService {
     public LogService() { }
 
-    public void createTable(Tenant tenant, String application, String table) {
+    public void createTable(String application, String table) {
         String store = application + "_" + table;
         DBService.instance().createStoreIfAbsent(store, true);
     }
 
-    public void deleteTable(Tenant tenant, String application, String table) {
+    public void deleteTable(String application, String table) {
         String store = application + "_" + table;
         DBService.instance().deleteStoreIfPresent(store);
     }
@@ -42,7 +41,7 @@ public class LogService {
         return timestamp;
     }
     
-    public void addBatch(Tenant tenant, String application, String table, OlapBatch batch) {
+    public void addBatch(String application, String table, OlapBatch batch) {
         String store = application + "_" + table;
         int size = batch.size();
         if(size == 0) return;
@@ -77,10 +76,10 @@ public class LogService {
         DBService.instance().commit(transaction);
     }
     
-    public void deleteOldSegments(Tenant tenant, String application, String table, long removeBeforeTimestamp) {
+    public void deleteOldSegments(String application, String table, long removeBeforeTimestamp) {
         String store = application + "_" + table;
         String partitionToCompare = getPartition(removeBeforeTimestamp); 
-        List<String> partitions = getPartitions(tenant, application, table);
+        List<String> partitions = getPartitions(application, table);
         DBTransaction transaction = null;
         for(String partition: partitions) {
             if(partition.compareTo(partitionToCompare) >= 0) continue;
@@ -93,7 +92,7 @@ public class LogService {
     }
     
 
-    public void mergePartition(Tenant tenant, String application, String table, String partition) {
+    public void mergePartition(String application, String table, String partition) {
         final int MERGE_SEGMENTS = 8192;
         final int MIN_MERGE_DOCS = 8192;
         final int MAX_MERGE_DOCS = 65536;
@@ -108,7 +107,7 @@ public class LogService {
             int eventsCount = info.getEventsCount();
             if(eventsCount > MIN_MERGE_DOCS) continue;
             if(totalSize + eventsCount > MAX_MERGE_DOCS || infos.size() == MAX_MERGE_DOCS) {
-                if(merger == null) merger = new ChunkMerger(this, tenant, application, table);
+                if(merger == null) merger = new ChunkMerger(this, application, table);
                 mergeChunks(infos, merger);
                 infos.clear();
                 totalSize = 0;
@@ -117,7 +116,7 @@ public class LogService {
             totalSize += eventsCount;
         }
         if(totalSize >= MIN_MERGE_DOCS) {
-            if(merger == null) merger = new ChunkMerger(this, tenant, application, table);
+            if(merger == null) merger = new ChunkMerger(this, application, table);
             mergeChunks(infos, merger);
             infos.clear();
             totalSize = 0;
@@ -141,7 +140,7 @@ public class LogService {
         DBService.instance().commit(transaction);
     }
     
-    public List<String> getPartitions(Tenant tenant, String application, String table) {
+    public List<String> getPartitions(String application, String table) {
         String store = application + "_" + table;
         List<String> partitions = new ArrayList<>();
         for(DColumn c: DBService.instance().getAllColumns(store, "partitions")) {
@@ -150,14 +149,14 @@ public class LogService {
         return partitions;
     }
 
-    public List<String> getPartitions(Tenant tenant, String application, String table, long minTimestamp, long maxTimestamp) {
+    public List<String> getPartitions(String application, String table, long minTimestamp, long maxTimestamp) {
         long oneDayMillis = 1000 * 3600 * 24;
         String minPartition = minTimestamp == 0 ? "" : getPartition(minTimestamp);
         String maxPartition = maxTimestamp == Long.MAX_VALUE ? "z" : getPartition(maxTimestamp + oneDayMillis - 1);
-        return getPartitions(tenant, application, table, minPartition, maxPartition);
+        return getPartitions(application, table, minPartition, maxPartition);
     }
     
-    public List<String> getPartitions(Tenant tenant, String application, String table, String fromPartition, String toPartition) {
+    public List<String> getPartitions(String application, String table, String fromPartition, String toPartition) {
         String store = application + "_" + table;
         List<String> partitions = new ArrayList<>();
         for(DColumn c: DBService.instance().getColumnSlice(store, "partitions", fromPartition, toPartition + '\0')) {
@@ -166,20 +165,20 @@ public class LogService {
         return partitions;
     }
     
-    public void readChunk(Tenant tenant, String application, String table, ChunkInfo chunkInfo, ChunkReader chunkReader) {
-        byte[] data = readChunkData(tenant, application, table, chunkInfo);
+    public void readChunk(String application, String table, ChunkInfo chunkInfo, ChunkReader chunkReader) {
+        byte[] data = readChunkData(application, table, chunkInfo);
         if(data == null) throw new RuntimeException("Data was deleted");
         chunkReader.read(data);
     }
 
-    public byte[] readChunkData(Tenant tenant, String application, String table, ChunkInfo chunkInfo) {
+    public byte[] readChunkData(String application, String table, ChunkInfo chunkInfo) {
         String store = application + "_" + table;
         DColumn column = DBService.instance().getColumn(store, chunkInfo.getPartition(), chunkInfo.getChunkId());
         if(column == null) return null;
         return column.getRawValue();
     }
     
-    public List<byte[]> readChunks(Tenant tenant, String application, String table, List<ChunkInfo> infos) {
+    public List<byte[]> readChunks(String application, String table, List<ChunkInfo> infos) {
         String store = application + "_" + table;
         List<String> chunkIds = new ArrayList<>(infos.size());
         for(ChunkInfo info: infos) chunkIds.add(info.getChunkId());
@@ -193,16 +192,16 @@ public class LogService {
     }
     
     
-    public SearchResultList search(Tenant tenant, String application, String table, LogQuery logQuery) {
-        return Searcher.search(this, tenant, application, table, logQuery);
+    public SearchResultList search(String application, String table, LogQuery logQuery) {
+        return Searcher.search(this, application, table, logQuery);
     }
     
-    public AggregationResult aggregate(Tenant tenant, String application, String table, LogAggregate logAggregate) {
-        return Searcher.aggregate(this, tenant, application, table, logAggregate);
+    public AggregationResult aggregate(String application, String table, LogAggregate logAggregate) {
+        return Searcher.aggregate(this, application, table, logAggregate);
     }
     
     
-    public ChunkIterable getChunks(Tenant tenant, String application, String table, String partition) {
+    public ChunkIterable getChunks(String application, String table, String partition) {
         String store = application + "_" + table;
         return new ChunkIterable(store, partition);
     }

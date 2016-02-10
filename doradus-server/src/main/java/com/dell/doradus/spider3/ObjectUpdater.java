@@ -15,11 +15,9 @@ import com.dell.doradus.common.Utils;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
-import com.dell.doradus.service.db.Tenant;
 
 public class ObjectUpdater {
     private DBService m_service;
-    private Tenant m_tenant;
     private ApplicationDefinition m_appDef;
     private String m_tableName;
     private DBObjectBatch m_batch;
@@ -28,8 +26,7 @@ public class ObjectUpdater {
     private BatchResult m_batchResult;
     
     
-    public ObjectUpdater(Tenant tenant, ApplicationDefinition appDef, String tableName, DBObjectBatch batch) {
-        m_tenant = tenant;
+    public ObjectUpdater(ApplicationDefinition appDef, String tableName, DBObjectBatch batch) {
         m_appDef = appDef;
         m_tableName = tableName;
         m_batch = batch;

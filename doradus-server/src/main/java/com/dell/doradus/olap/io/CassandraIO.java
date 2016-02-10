@@ -22,14 +22,10 @@ import java.util.List;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
-import com.dell.doradus.service.db.Tenant;
 
 public class CassandraIO implements IO {
-    private final Tenant m_tenant;
     
-	public CassandraIO(Tenant tenant) {
-	    m_tenant = tenant;
-	}
+	public CassandraIO() { }
 
 	@Override
 	public byte[] getValue(String app, String key, String column) {

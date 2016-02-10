@@ -31,7 +31,6 @@ import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
 import com.dell.doradus.service.db.RowDelete;
-import com.dell.doradus.service.db.Tenant;
 
 
 /**
@@ -65,9 +64,7 @@ public class HybridService extends DBService {
     private int m_valueThreshold;
     protected final Logger m_logger = LoggerFactory.getLogger(getClass());
     
-    public HybridService(Tenant tenant) {
-        super(tenant);
-        
+    public HybridService() {
         String serviceNosqlName = getParamString("service-nosql");
         String serviceDatastoreName = getParamString("service-datastore");
         m_valueThreshold = getParamInt("value-threshold", 1024);
@@ -75,11 +72,11 @@ public class HybridService extends DBService {
         try {
             Constructor<?> constructor;
             Class<? extends DBService> serviceNosqlClass = Class.forName(serviceNosqlName).asSubclass(DBService.class);
-            constructor = serviceNosqlClass.getConstructor(Tenant.class);
-            m_serviceNosql = (DBService) constructor.newInstance(tenant);
+            constructor = serviceNosqlClass.getConstructor();
+            m_serviceNosql = (DBService) constructor.newInstance();
             Class<? extends DBService> serviceDatastoreClass = Class.forName(serviceDatastoreName).asSubclass(DBService.class);
-            constructor = serviceDatastoreClass.getConstructor(Tenant.class);
-            m_serviceDatastore = (DBService)constructor.newInstance(tenant);
+            constructor = serviceDatastoreClass.getConstructor();
+            m_serviceDatastore = (DBService)constructor.newInstance();
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
@@ -117,8 +114,8 @@ public class HybridService extends DBService {
     }
     
     @Override public void commit(DBTransaction dbTran) {
-        DBTransaction nosqlTransaction = new DBTransaction(dbTran.getTenant());
-        DBTransaction datastoreTransaction = new DBTransaction(dbTran.getTenant());
+        DBTransaction nosqlTransaction = new DBTransaction();
+        DBTransaction datastoreTransaction = new DBTransaction();
         
         for(ColumnUpdate mutation: dbTran.getColumnUpdates()) {
             String storeName = mutation.getStoreName();

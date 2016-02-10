@@ -39,7 +39,6 @@ import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
 import com.dell.doradus.service.db.RowDelete;
-import com.dell.doradus.service.db.Tenant;
 
 public class AmazonS3Service extends DBService {
     private static final byte[] EMPTY_BYTES = new byte[0];
@@ -48,8 +47,7 @@ public class AmazonS3Service extends DBService {
     private static ExecutorService s3_executor;
     
     
-    public AmazonS3Service(Tenant tenant) {
-        super(tenant);
+    public AmazonS3Service() {
         connect();
     }
 
@@ -87,11 +85,11 @@ public class AmazonS3Service extends DBService {
     }
     
     @Override public void createNamespace() {
-        //?? how to create tenant?
+        //?? how to create namespace?
     }
 
     @Override public void dropNamespace() {
-        m_connection.deleteAll(getTenant().getName());
+        m_connection.deleteAll("/");
     }
     
     public Collection<String> getNamespaces() {
@@ -108,7 +106,7 @@ public class AmazonS3Service extends DBService {
     }
     
     @Override public void deleteStoreIfPresent(String storeName) {
-        m_connection.deleteAll(getTenant().getName() + "/" + storeName);
+        m_connection.deleteAll("/" + storeName);
     }
     
     public String encode(String name) {
@@ -140,7 +138,6 @@ public class AmazonS3Service extends DBService {
     
     @Override public void commit(DBTransaction dbTran) {
         List<Future<?>> futures = new ArrayList<>();
-    	String keyspace = dbTran.getTenant().getName();
         //1. update
         for(ColumnUpdate mutation: dbTran.getColumnUpdates()) {
             String store = mutation.getStoreName();
@@ -148,7 +145,7 @@ public class AmazonS3Service extends DBService {
             DColumn c = mutation.getColumn();
             String column = c.getName();
             final byte[] value = c.getRawValue();
-            final String path = keyspace + "/" + store + "/" + encode(row) + "/" + encode(column);
+            final String path = "/" + store + "/" + encode(row) + "/" + encode(column);
             futures.add(s3_executor.submit(new Runnable(){
                 @Override public void run() {
                     m_connection.put(path, value);
@@ -160,7 +157,7 @@ public class AmazonS3Service extends DBService {
             String store = mutation.getStoreName();
             String row = mutation.getRowKey();
             String column = mutation.getColumnName();
-            final String path = keyspace + "/" + store + "/" + encode(row) + "/" + encode(column);
+            final String path = "/" + store + "/" + encode(row) + "/" + encode(column);
             futures.add(s3_executor.submit(new Runnable(){
                 @Override public void run() {
                     m_connection.delete(path);
@@ -171,7 +168,7 @@ public class AmazonS3Service extends DBService {
         for(RowDelete mutation: dbTran.getRowDeletes()) {
             String store = mutation.getStoreName();
             String row = mutation.getRowKey();
-            String path = keyspace + "/" + store + "/" + encode(row);
+            String path = store + "/" + encode(row);
             futures.add(s3_executor.submit(new Runnable(){
                 @Override public void run() {
                     m_connection.deleteAll(path);
@@ -184,10 +181,9 @@ public class AmazonS3Service extends DBService {
     @Override
     public List<DColumn> getColumns(String storeName,
             String rowKey, String startColumn, String endColumn, int count) {
-        String namespace = getTenant().getName();
         List<Future<?>> futures = new ArrayList<>();
         final ArrayList<DColumn> list = new ArrayList<>();
-        final String path = namespace + "/" + storeName + "/" + encode(rowKey) + "/";
+        final String path = "/" + storeName + "/" + encode(rowKey) + "/";
         List<ListItem> keys = m_connection.listAll(path);
         for(ListItem item: keys) {
             final String key = item.name;
@@ -215,10 +211,9 @@ public class AmazonS3Service extends DBService {
 
     @Override
     public List<DColumn> getColumns(String storeName, String rowKey, Collection<String> columnNames) {
-        String namespace = getTenant().getName();
         List<Future<?>> futures = new ArrayList<>();
         final ArrayList<DColumn> list = new ArrayList<>();
-        final String path = namespace + "/" + storeName + "/" + encode(rowKey) + "/";
+        final String path = "/" + storeName + "/" + encode(rowKey) + "/";
         for(String columnName: columnNames) {
             futures.add(s3_executor.submit(new Runnable() {
                 @Override public void run() {
@@ -238,9 +233,8 @@ public class AmazonS3Service extends DBService {
 
     @Override
     public List<String> getRows(String storeName, String continuationToken, int count) {
-        String namespace = getTenant().getName();
         List<String> rows = new ArrayList<>();
-        String path = namespace + "/" + storeName + "/";
+        String path = "/" + storeName + "/";
         List<ListItem> rowKeys = m_connection.listAll(path);
         for(ListItem item: rowKeys) {
             String row = item.name;

@@ -32,7 +32,6 @@ import com.dell.doradus.service.db.CassandraService;
 import com.dell.doradus.service.db.DBNotAvailableException;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.schema.SchemaService;
 
 public class ThriftService extends CassandraService {
@@ -46,14 +45,14 @@ public class ThriftService extends CassandraService {
     // DBConn queue:
     private final Queue<DBConn> m_dbConns = new ArrayDeque<>();
     
-    // Single-thread all schema access for our tenant:
+    // Single-thread all schema access:
     private final Object m_schemaLock = new Object();
     private final CassandraSchemaMgr m_schemaMgr;
 
-    public ThriftService(Tenant tenant) {
-        super(tenant);
+    public ThriftService() {
         m_schemaMgr = new CassandraSchemaMgr(this);
-        m_keyspace = tenant.getName();
+        m_keyspace = getParamString("keyspace_name");
+        Utils.require(!Utils.isEmpty(m_keyspace), "'keyspace_name' parameter has not been defined");
         
         // Create a no-session DBConn and get keyspaces to verify it.
         try (DBConn dbConn = createAndConnectConn(null)) {
@@ -80,7 +79,7 @@ public class ThriftService extends CassandraService {
                 }
             }
         }
-    }   // createTenant
+    }
 
     @Override
     public void dropNamespace() {
@@ -92,7 +91,7 @@ public class ThriftService extends CassandraService {
                 }
             }
         }
-    }   // dropTenant
+    }
     
     public List<String> getDoradusKeyspaces() {
         List<String> keyspaces = new ArrayList<>();
@@ -144,7 +143,6 @@ public class ThriftService extends CassandraService {
     
     @Override
     public void commit(DBTransaction dbTran) {
-        assert dbTran.getTenant().getName().equals(this.getTenant().getName());
         DBConn dbConn = getDBConnection();
         try {
             dbConn.commit(dbTran);

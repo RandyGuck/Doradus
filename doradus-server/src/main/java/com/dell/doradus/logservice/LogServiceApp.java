@@ -26,12 +26,10 @@ import com.dell.doradus.common.ApplicationDefinition;
 import com.dell.doradus.common.TableDefinition;
 import com.dell.doradus.search.SearchResult;
 import com.dell.doradus.search.SearchResultList;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.schema.SchemaService;
 
 // simple REST application based on LogService
 public class LogServiceApp {
-    private Tenant m_tenant;
     private LogService m_logService;
 	private Map<String, String> m_parameters;
 	private StringBuilder m_builder;
@@ -54,15 +52,14 @@ public class LogServiceApp {
 		return value;
 	}
 	
-	public LogServiceApp(Tenant tenant, LogService logService, Map<String, String> parameters) {
-	    m_tenant = tenant;
+	public LogServiceApp(LogService logService, Map<String, String> parameters) {
 	    m_logService = logService;
 	    m_parameters = parameters;
 	    m_builder = new StringBuilder();
 	}
 	
-	public static String process(Tenant tenant, LogService logService, Map<String, String> parameters) {
-	    LogServiceApp lsapp = new LogServiceApp(tenant, logService, parameters);
+	public static String process(LogService logService, Map<String, String> parameters) {
+	    LogServiceApp lsapp = new LogServiceApp(logService, parameters);
 	    return lsapp.process();
 	}
 	
@@ -76,7 +73,7 @@ public class LogServiceApp {
 	
 	private String processGetApplications() {
 	    List<ApplicationDefinition> appDefs = new ArrayList<>();
-	    for(ApplicationDefinition appDef: SchemaService.instance().getAllApplications(m_tenant)) {
+	    for(ApplicationDefinition appDef: SchemaService.instance().getAllApplications()) {
 	        if(!"LoggingService".equals(appDef.getStorageService())) continue;
 	        appDefs.add(appDef);
 	    }
@@ -105,7 +102,7 @@ public class LogServiceApp {
 	            "e", getContinue(),
 	            "pattern", getPattern());
 	    LogQuery logQuery = new LogQuery(queryParam);
-	    SearchResultList result = m_logService.search(m_tenant, getApplication(), getTable(), logQuery);
+	    SearchResultList result = m_logService.search(getApplication(), getTable(), logQuery);
         m_builder.append("<html><body>");
 
         if(result.results.size() == 0) {

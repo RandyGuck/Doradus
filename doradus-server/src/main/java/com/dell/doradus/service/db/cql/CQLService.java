@@ -50,7 +50,6 @@ import com.dell.doradus.service.db.DBNotAvailableException;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DBTransaction;
 import com.dell.doradus.service.db.DColumn;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.db.cql.CQLStatementCache.Query;
 import com.dell.doradus.service.db.cql.CQLStatementCache.Update;
 import com.dell.doradus.service.schema.SchemaService;
@@ -66,10 +65,10 @@ public class CQLService extends CassandraService {
     // Quoted version of Applications CF name:
     private static final String APPS_CQL_NAME = "\"" + SchemaService.APPS_STORE_NAME + "\"";
     
-    public CQLService(Tenant tenant) {
-        super(tenant);
-        m_statementCache = new CQLStatementCache(tenant);
-        m_keyspace = storeToCQLName(tenant.getName());
+    public CQLService() {
+        m_statementCache = new CQLStatementCache();
+        m_keyspace = getParamString("keyspace_name");
+        Utils.require(!Utils.isEmpty(m_keyspace), "'keyspace_name' parameter has not been defined");
         m_cluster = buildClusterSpecs();
         connectToCluster();
     }
@@ -270,10 +269,10 @@ public class CQLService extends CassandraService {
     }   // getSession
     
     /**
-     * Get the keyspace name used by this DBSevice's tenant. The name is quoted for use in
+     * Get the keyspace name used by this DBSevice. The name is quoted for use in
      * CQL statements.
      * 
-     * @return  Quoted keyspace name used by this DBSevice's tenant.
+     * @return  Quoted keyspace name used by this DBSevice.
      */
     public String getKeyspace() {
         return m_keyspace;

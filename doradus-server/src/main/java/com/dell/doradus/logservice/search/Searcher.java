@@ -27,15 +27,14 @@ import com.dell.doradus.search.parser.DoradusQueryBuilder;
 import com.dell.doradus.search.query.Query;
 import com.dell.doradus.service.db.DBService;
 import com.dell.doradus.service.db.DColumn;
-import com.dell.doradus.service.db.Tenant;
 
 public class Searcher {
     
-    public static SearchResultList search(LogService ls, Tenant tenant, String application, String table, LogQuery logQuery) {
-        SearchRequest request = new SearchRequest(tenant, application, table, logQuery);
+    public static SearchResultList search(LogService ls, String application, String table, LogQuery logQuery) {
+        SearchRequest request = new SearchRequest(application, table, logQuery);
         SearchCollector collector = new SearchCollector(request.getCount());
         LogEntry current = null;
-        List<String> partitions = ls.getPartitions(tenant, application, table, request.getMinTimestamp(), request.getMaxTimestamp());
+        List<String> partitions = ls.getPartitions(application, table, request.getMinTimestamp(), request.getMaxTimestamp());
         //optimization: inverse partitions
         if(request.getSkipCount() && request.getSortDescending()) {
             Collections.reverse(partitions);
@@ -49,14 +48,14 @@ public class Searcher {
             long minPartitionTimestamp = ls.getTimestamp(partition);
             long maxPartitionTimestamp = minPartitionTimestamp + 1000 * 3600 * 24;
             if(!checkInRange(minPartitionTimestamp, maxPartitionTimestamp, request, collector)) continue;
-            Iterable<ChunkInfo> chunks = ls.getChunks(tenant, application, table, partition);
+            Iterable<ChunkInfo> chunks = ls.getChunks(application, table, partition);
             chunks = new SortedChunkIterable(chunks, request.getSortDescending());
             for(ChunkInfo chunkInfo: chunks) {
                 if(!checkInRange(chunkInfo.getMinTimestamp(), chunkInfo.getMaxTimestamp(), request, collector)) continue;
                 int c = filter.check(chunkInfo);
                 if(c == -1) continue;
                 BitVector bv = new BitVector(chunkInfo.getEventsCount());
-                ls.readChunk(tenant, application, table, chunkInfo, chunkReader);
+                ls.readChunk(application, table, chunkInfo, chunkReader);
                 if(c == 1) bv.setAll();
                 else filter.check(chunkReader, bv);
                 
@@ -117,8 +116,8 @@ public class Searcher {
     }
     
     
-    public static AggregationResult aggregate(LogService ls, Tenant tenant, String application, String table, LogAggregate logAggregate) {
-        TableDefinition tableDef = Searcher.getTableDef(tenant, application, table, logAggregate.getPattern());
+    public static AggregationResult aggregate(LogService ls, String application, String table, LogAggregate logAggregate) {
+        TableDefinition tableDef = Searcher.getTableDef(application, table, logAggregate.getPattern());
         Query query = DoradusQueryBuilder.Build(logAggregate.getQuery(), tableDef);
         AggregationGroup group = Aggregate.getAggregationGroup(tableDef, logAggregate.getFields());
         String field = Aggregate.getAggregateField(group);
@@ -136,11 +135,11 @@ public class Searcher {
         else {
             collector = new AggregateCollectorField(filter, field);
         }
-        collector.setContext(ls, tenant, application, table, logAggregate.getPattern());
+        collector.setContext(ls, application, table, logAggregate.getPattern());
         
-        List<String> partitions = ls.getPartitions(tenant, application, table);
+        List<String> partitions = ls.getPartitions(application, table);
         for(String partition: partitions) {
-            for(ChunkInfo chunkInfo: ls.getChunks(tenant, application, table, partition)) {
+            for(ChunkInfo chunkInfo: ls.getChunks(application, table, partition)) {
                 collector.addChunk(chunkInfo);
             }
         }
@@ -160,7 +159,7 @@ public class Searcher {
     
     
     
-    public static TableDefinition getTableDef(Tenant tenant, String application, String table, String pattern) {
+    public static TableDefinition getTableDef(String application, String table, String pattern) {
         String store = application + "_" + table;
         ApplicationDefinition appDef = new ApplicationDefinition();
         appDef.setAppName(application);

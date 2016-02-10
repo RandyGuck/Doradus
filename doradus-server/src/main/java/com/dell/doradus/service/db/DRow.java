@@ -27,17 +27,14 @@ import java.util.List;
  * were retrieved from the database.
  */
 public class DRow {
-    private Tenant m_tenant;
     private String m_storeName;
     private String m_rowKey;
     
-    public DRow(Tenant tenant, String storeName, String rowKey) {
-        m_tenant = tenant;
+    public DRow(String storeName, String rowKey) {
         m_storeName = storeName;
         m_rowKey = rowKey;
     }
     
-    public Tenant getTenant() { return m_tenant; }
     public String getStoreName() { return m_storeName; }
     public String getRowKey() { return m_rowKey; }
     public String getKey() { return m_rowKey; } // for backward compatibility

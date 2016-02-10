@@ -19,7 +19,6 @@ package com.dell.doradus.service.schema;
 import com.dell.doradus.common.ApplicationDefinition;
 import com.dell.doradus.common.HttpMethod;
 import com.dell.doradus.common.UNode;
-import com.dell.doradus.service.db.Tenant;
 import com.dell.doradus.service.rest.UNodeOutCallback;
 import com.dell.doradus.service.rest.annotation.Description;
 
@@ -34,9 +33,8 @@ public class ListApplicationsCmd extends UNodeOutCallback {
 
     @Override
     public UNode invokeUNodeOut() {
-        Tenant tenant = m_request.getTenant();
         UNode rootNode = UNode.createMapNode("applications");
-        for (ApplicationDefinition appDef : SchemaService.instance().getAllApplications(tenant)) {
+        for (ApplicationDefinition appDef : SchemaService.instance().getAllApplications()) {
             rootNode.addChildNode(appDef.toDoc());
         }
         return rootNode;
