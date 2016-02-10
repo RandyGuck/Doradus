@@ -46,7 +46,6 @@ public abstract class DBService extends Service {
             Class<DBService> serviceClass = (Class<DBService>) Class.forName(dbServiceName);
             Constructor<DBService> constructor = serviceClass.getConstructor(Tenant.class);
             INSTANCE = constructor.newInstance(new Tenant());
-            INSTANCE.initialize();
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Cannot load specified 'dbservice': " + dbServiceName, e);
         } catch (ClassNotFoundException e) {
