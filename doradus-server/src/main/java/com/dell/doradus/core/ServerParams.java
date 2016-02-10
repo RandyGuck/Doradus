@@ -298,7 +298,9 @@ public class ServerParams {
     /**
      * Get the value of the given parameter name belonging to the given module name as a
      * List of Strings. If no such module/parameter name is known, null is returned. If
-     * the parameter is defined but is not a list, an IllegalArgumentException is thrown. 
+     * the parameter's value is a String, it is returned as a one-element List. If the
+     * parameter's is a List, it is returned as-is. If the value is any other type, an
+     * IllegalArgumentException is thrown.
      * 
      * @param moduleName    Name of module to get parameter for.
      * @param paramName     Name of parameter to get value of.
@@ -311,10 +313,13 @@ public class ServerParams {
             return null;
         }
         Object paramValue = moduleParams.get(paramName);
-        if (!(paramValue instanceof List)) {
+        if (paramValue instanceof String) {
+            return Arrays.asList(paramValue.toString());
+        } else if (!(paramValue instanceof List)) {
             throw new IllegalArgumentException("Parameter '" + paramName + "' must be a list: " + paramValue);
+        } else {
+            return (List<String>)paramValue;
         }
-        return (List<String>)paramValue;
     }
     
     /**
