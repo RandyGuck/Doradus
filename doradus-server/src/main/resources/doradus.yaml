@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+##### Core Parameters
+
+# Parameters used by the core DoradusServer module.
 DoradusServer:
     aggr_separate_search: false
     dbesoptions_entityBuffer: 1000
@@ -29,11 +32,10 @@ DoradusServer:
         - com.dell.doradus.service.olap.OLAPService
         - com.dell.doradus.logservice.LoggingService
         - com.dell.doradus.service.olap.mono.OLAPMonoService
-# Warning! Privilege commands require no authentication unless these are defined:        
-#    super_user: cassandra
-#    super_password: cassandra
 
-# Parameters common to the default database.
+##### DBServices
+
+# Parameters common to the all database types.
 DBService:
     # Defines the concrete DBService that manages the default database.
     dbservice: com.dell.doradus.service.db.thrift.ThriftService
@@ -42,8 +44,7 @@ DBService:
     max_read_attempts: 7
     retry_wait_millis: 5000
 
-# Additional DBService parameters used by CQLService and ThriftService for the default
-# default database or new tenant databases.
+# Additional DBService parameters used by CQLService and ThriftService.
 CassandraService:
     cf_defaults:
         compression_options:
@@ -67,17 +68,48 @@ CassandraService:
     truststore: config/truststore
     truststorepassword: password
 
-# DBService parameters specific to the CQLService: 
+# Additional DBService parameters specific to CQLService. 
 CQLService:
     dbport: 9042
 
-# DBService parameters specific to the ThriftService: 
+# Additional DBService parameters specific to ThriftService. 
 ThriftService:
     dbport: 9160
     max_reconnect_attempts: 3
     secondary_dbhost: 
     thrift_buffer_size_mb: 16
 
+# Additional DBService parameters used by FsService.
+FsService:
+    db-path: ./fsstorage-data
+
+# Additional DBService parameters used by AmazonS3Service.
+AmazonS3Service:
+#   s3-access-key: 
+#   s3-secret-key: 
+#   s3-bucket:
+#   s3-endpoint-http-port:
+#   s3-https-only:
+#   s3-endpoint:
+#   s3-threads:
+
+# Additional DBService parametes used by DynamoDBService.
+DynamoDBService:
+#   aws_profile: 
+#   aws_credentials_file: 
+#   aws_access_key:         # Alternative to setting aws_profile
+#   aws_secret_key:         # Use when aws_access_key is defined
+#   ddb_region:
+#   ddb_endpoint:           # Alternative to ddb_region
+
+# Additional DBService parameters used by the HybridService.
+HybridService:
+#   service-nosql: 
+#   service-datastore: 
+
+##### RESTService Parameters
+
+# Parameters used by the RESTService when it is enabled.
 RESTService:
     clientauthentication: false
     keystore: config/keystore
@@ -113,6 +145,9 @@ RESTService:
     truststorepassword: password
     webserver_class: com.dell.doradus.service.rest.JettyWebServer
 
+##### StorageService parameters
+
+# Parameters used by the OLAP storage service.
 OLAPService:
     olap_cache_size_mb: 1000
     olap_compression_level: -1
@@ -122,5 +157,6 @@ OLAPService:
     olap_query_cache_size_mb: 100
     olap_search_threads: 0
 
+# Parameters used by the Spider storage service.
 SpiderService:
     batch_mutation_threshold: 10000

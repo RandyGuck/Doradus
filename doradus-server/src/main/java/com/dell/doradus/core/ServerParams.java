@@ -488,6 +488,9 @@ public class ServerParams {
     // Set the given parameter name and value. The parameter name could be a module name
     // (e.g., DBService) or a legacy YAML file option (e.g., dbhost).
     private void addConfigParam(String name, Object value) throws ConfigurationException {
+        if (value == null) {
+            return;
+        }
         if (isModuleName(name)) {
             Utils.require(value instanceof Map,
                           "Value for module '%s' should be a map: %s", name, value.toString());
