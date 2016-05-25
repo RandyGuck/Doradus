@@ -105,7 +105,7 @@ public class Command {
     
     /**
      * Call method implementation
-     * @param restClient
+     * @param restClient    RESTClient to use to execute command.
      * @return RESTResponse result object
      */
     public RESTResponse call(RESTClient restClient){        
@@ -127,7 +127,7 @@ public class Command {
 
     /**
      * Validate the command
-     * @param restClient
+     * @param restClient RESTClient to use to validate command.
      */
     public void validate(RESTClient restClient) {
         Utils.require(this.commandName != null, "missing command name");
@@ -262,10 +262,10 @@ public class Command {
  
     /**
      * Finds out if a command is supported by Doradus
-     * @param commandsJson
-     * @param commandName
-     * @param storageService
-     * @return
+     * @param commandsJson  Command description in JSON
+     * @param commandName   Command name.
+     * @param storageService Storage service to which command belongs.
+     * @return  JsonObject that describes command or null if unsupported.
      */
     public static JsonObject matchCommand(JsonObject commandsJson, String commandName, String storageService) {
         for (String key : commandsJson.keySet())  {
@@ -387,8 +387,8 @@ public class Command {
         
         /**
          * Provides command with name
-         * @param name
-         * @return
+         * @param name  Command name.
+         * @return  Same Builder object.
          */
         public Builder withName(String name) {
             command.setName(name);
@@ -397,9 +397,9 @@ public class Command {
  
         /**
          * Provides command with JSON object
-         * @param name
+         * @param name  Parameter name.
          * @param value JSONable object
-         * @return
+         * @return  Same Builder object.
          */
         public Builder withParam(String name, JSONable value) {
             if (!Utils.isEmpty(name)) {
@@ -410,9 +410,9 @@ public class Command {
     
         /**
          * Provides command with param key and String value
-         * @param name
-         * @param value
-         * @return
+         * @param name  Parameter name.
+         * @param value Parameter value.
+         * @return  Same Builder object.
          */
         public Builder withParam(String name, String value) {
             if (!Utils.isEmpty(name)) {
@@ -423,9 +423,9 @@ public class Command {
         
         /**
          * Provides command with param key and int value
-         * @param name
-         * @param value
-         * @return
+         * @param name  Parameter name.
+         * @param value Parameter value.
+         * @return  Same Builder object.
          */
         public Builder withParam(String name, int value) {
             if (!Utils.isEmpty(name)) {

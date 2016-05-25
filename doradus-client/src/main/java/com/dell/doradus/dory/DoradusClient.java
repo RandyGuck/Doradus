@@ -60,7 +60,7 @@ public class DoradusClient implements AutoCloseable {
      * Static factory method to open a 'dory' client session
      * @param host Doradus Server host name or IP address.
      * @param port Doradus Server port number.
-     * @param applicationName
+     * @param applicationName Name of application to open.
      * @return the instance of the DoradusClient session
      */
     public static DoradusClient open(String host, int port, String applicationName) {  
@@ -85,7 +85,7 @@ public class DoradusClient implements AutoCloseable {
     
     /**
      * set JSON Object that contains all REST commands descriptions
-     * @param restMetadataJson
+     * @param restMetadataJson JsonObject with REST command metadata.
      */
     public void setRestMetadataJson(JsonObject restMetadataJson) {
         this.restMetadataJson = restMetadataJson;

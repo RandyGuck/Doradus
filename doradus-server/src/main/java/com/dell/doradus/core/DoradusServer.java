@@ -97,7 +97,7 @@ public final class DoradusServer {
      * file options with the given options. All required services plus
      * default_services and storage_services configured in doradus.yaml are
      * started. The process blocks until a shutdown signal is received via
-     * Ctrl-C or until {@link #shutdown(String[])} is called.
+     * Ctrl-C or until {@link #shutDown()} is called.
      * 
      * @param args
      *            Optional arguments that override doradus.yaml file options.

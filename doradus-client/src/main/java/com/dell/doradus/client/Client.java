@@ -204,9 +204,6 @@ public class Client implements AutoCloseable {
      * @param sslParams
      *            {@link SSLTransportParameters} object containing TLS/SSL parameters to
      *            use, or null to open an HTTP connection.
-     * @param credentials
-     *            {@link Credentials} to use for all requests with the new application
-     *            session. Can be null to use an unauthenticated session.
      * @return {@link ApplicationSession}
      *            through which the application can be accessed.
      * @see com.dell.doradus.client.OLAPSession
@@ -264,7 +261,6 @@ public class Client implements AutoCloseable {
      * @param appDef    {@link ApplicationDefinition} of application to create or update.
      * @return          {@link ApplicationDefinition} of same application, updated with
      *                  any system-assigned defaults.
-     * @see #setCredentials(Credentials)
      */
     public ApplicationDefinition createApplication(ApplicationDefinition appDef) {
         Utils.require(!m_restClient.isClosed(), "Client has been closed");

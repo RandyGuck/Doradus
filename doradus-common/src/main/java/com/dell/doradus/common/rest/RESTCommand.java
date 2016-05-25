@@ -186,8 +186,8 @@ public class RESTCommand {
     /**
      * Set this command's summary text.
      * 
-     * @param name  A short descriptive text such as "This command performs an object
-     *              query against a given table."
+     * @param summary  A short descriptive text such as "This command performs an object
+     *                 query against a given table."
      */
     public void setSummary(String summary) {
         m_summary = summary;
