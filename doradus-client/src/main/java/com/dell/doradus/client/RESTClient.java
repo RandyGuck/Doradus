@@ -347,6 +347,7 @@ public class RESTClient implements Closeable {
         StringBuilder buffer = new StringBuilder();
         buffer.append(method.toString());
         buffer.append(" ");
+        buffer.append(uri);
         buffer.append(" HTTP/1.1\r\n");
         for (String name : headers.keySet()) {
             buffer.append(name);
