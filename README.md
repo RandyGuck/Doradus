@@ -1,5 +1,12 @@
 #Randy's Doradus
-This is a fork of the dell-oss/Doradus project originally located at: [https://github.com/dell-oss/Doradus](https://github.com/dell-oss/Doradus). This version has changes that are intended to simplify Doradus for certain cases. Compared to the dell-oss version, here are the main changes I've made so far:
+This is a fork of the dell-oss/Doradus project originally located at: [https://github.com/dell-oss/Doradus](https://github.com/dell-oss/Doradus). This version has changes that are intended to simplify Doradus for most cases. Compared to the dell-oss version, here are the main changes I've made so far:
+
+- All support for the legacy YAML file format has been removed. The "module" style format is now required. Among other things, this means you can set/override module parameters using either of the following command-line argument styles:
+
+```
+	-DBService '{dbservice=com.dell.doradus.service.db.fs.FsService}' -FsService '{db-path=/Users/rguck/doradus-data}'
+	-DBService.dbservice com.dell.doradus.service.db.fs.FsService -FsService.db-path /Users/rguck/doradus-data
+```
 
 - All "tenant" code has been removed, making Doradus a single-tenant database. The hetereogeneous multi-tenant functionality was highly specialized and added lots of complexity. A better way to make implement multi-tenancy is to place a "tenant manager" service in front of multiple, independent Doradus processes. Maybe I'll create one of those some day.
 
