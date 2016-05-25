@@ -27,7 +27,6 @@ import com.dell.doradus.common.FieldDefinition;
 import com.dell.doradus.common.FieldType;
 import com.dell.doradus.common.TableDefinition;
 import com.dell.doradus.common.Utils;
-import com.dell.doradus.core.ServerConfig;
 import com.dell.doradus.olap.aggregate.mr.MFCollectorSet;
 import com.dell.doradus.olap.collections.BdLongSet;
 import com.dell.doradus.olap.io.BSTR;
@@ -63,6 +62,7 @@ import com.dell.doradus.search.query.Query;
 import com.dell.doradus.search.query.RangeQuery;
 import com.dell.doradus.search.query.TransitiveLinkQuery;
 import com.dell.doradus.search.util.LRUSizeCache;
+import com.dell.doradus.service.olap.OLAPService;
 
 public class ResultBuilder {
 	private static int queryCache = -1;
@@ -71,7 +71,7 @@ public class ResultBuilder {
 	public static Result search(TableDefinition tableDef, Query query, CubeSearcher searcher) {
 		synchronized(ResultBuilder.class) {
 			if(queryCache == -1) {
-				queryCache = ServerConfig.getInstance().olap_query_cache_size_mb;
+				queryCache = OLAPService.instance().getParamInt("olap_query_cache_size_mb", 100);
 				if(queryCache > 0) {
 					m_cache = new LRUSizeCache<String, Result>(0, queryCache * 1024L * 1024);
 				}

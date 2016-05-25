@@ -54,105 +54,6 @@ public class ServerParams {
     // Local members:
     private final SortedMap<String, Object> m_params = new TreeMap<>();
     private String[] m_commandLineArgs;
-    private boolean m_bWarnedLegacyParam;
-
-    //----- Map to legacy configuration names: delete after transition
-    private final static Map<String, String> g_legacyToModuleMap = new HashMap<>();
-    
-    // Register the given legacy parameter name as owned by the given module name.
-    private static void setLegacy(String moduleName, String legacyParamName) {
-        String oldValue = g_legacyToModuleMap.put(legacyParamName, moduleName);
-        if (oldValue != null) {
-            logger.warn("Legacy parameter name used twice: {}", legacyParamName);
-        }
-    }
-    
-    // Register the given legacy parameter names as owned by the given module name.
-    private static void setLegacy(String moduleName, String... legacyParamNames) {
-        for (String legacyParamName : legacyParamNames) {
-            setLegacy(moduleName, legacyParamName);
-        }
-    }
-
-    // Modules and the legacy parameters they own.
-    static {
-        setLegacy("DoradusServer",
-            "default_services",
-            "l2r_enable",
-            "search_default_page_size",
-            "storage_services",
-            "aggr_separate_search",
-            "dbesoptions_entityBuffer",
-            "dbesoptions_initialLinkBuffer",
-            "dbesoptions_initialLinkBufferDimension",
-            "dbesoptions_initialScalarBuffer",
-            "dbesoptions_linkBuffer",
-            "param_override_filename"
-        );
-        
-        setLegacy("RESTService",
-            "clientauthentication",
-            "defaultIdleTimeout",
-            "defaultMinThreads",
-            "keystore",
-            "keystorepassword",
-            "maxconns",
-            "max_request_size",
-            "maxTaskQueue",
-            "restaddr",
-            "restport",
-            "tls",
-            "tls_cipher_suites",
-            "truststore",
-            "truststorepassword",
-            "webserver_class"
-        );
-        
-        setLegacy("DBService",
-            "async_updates",
-            "cf_defaults",
-            "db_connect_retry_wait_millis",
-            "db_timeout_millis",
-            "dbhost",
-            "dbpassword",
-            "dbport",
-            "dbservice",
-            "dbtls",
-            "dbtls_cipher_suites",
-            "dbuser",
-            "jmxport",
-            "keyspace",
-            "ks_defaults",
-            "max_commit_attempts",
-            "max_read_attempts",
-            "max_reconnect_attempts",
-            "primary_host_recheck_millis",
-            "retry_wait_millis",
-            "secondary_dbhost",
-            "thrift_buffer_size_mb",
-            "use_cql"
-        );
-        
-        setLegacy("OLAPService",
-            "olap_cache_size_mb",
-            "olap_cf_defaults",
-            "olap_compression_level",
-            "olap_compression_threads",
-            "olap_file_cache_size_mb",
-            "olap_internal_compression",
-            "olap_loaded_segments",
-            "olap_merge_threads",
-            "olap_query_cache_size_mb",
-            "olap_search_threads"
-        );
-        
-        setLegacy("SpiderService", "batch_mutation_threshold");
-        
-        setLegacy("CassandraNode",
-            "dbhome",
-            "dbtool"
-        );
-    }
 
     /**
      * Get the configuration singleton. {@link #load(String[])} must be called first.
@@ -186,9 +87,6 @@ public class ServerParams {
         INSTANCE.parseCommandLineArgs(args);
         INSTANCE.parseOverrideFile();
         INSTANCE.printConfig();
-        
-        // TODO: Delete the next line when ServerConfig is phased out.
-        copyParamsToServerConfig();
         return INSTANCE;
     }
 
@@ -485,19 +383,15 @@ public class ServerParams {
         }
     }
     
-    // Set the given parameter name and value. The parameter name could be a module name
-    // (e.g., DBService) or a legacy YAML file option (e.g., dbhost).
+    // Set the given parameter name and value. The parameter name must be a module name
+    // (e.g., DBService).
     private void addConfigParam(String name, Object value) throws ConfigurationException {
         if (value == null) {
             return;
         }
-        if (isModuleName(name)) {
-            Utils.require(value instanceof Map,
-                          "Value for module '%s' should be a map: %s", name, value.toString());
-            updateMap(m_params, name, value);
-        } else {
-            setLegacyParam(name, value);
-        }
+        Utils.require(value instanceof Map,
+                      "Value for module '%s' should be a map: %s", name, value.toString());
+        updateMap(m_params, name, value);
     }
 
     // Replace or add the given parameter name and value to the given map. 
@@ -521,21 +415,6 @@ public class ServerParams {
         }
     }
 
-    // Sets a parameter using a legacy name.
-    private void setLegacyParam(String legacyParamName, Object paramValue) {
-        if (!m_bWarnedLegacyParam) {
-            logger.warn("Parameter '{}': Legacy parameter format is being phased-out. " +
-                        "Please use new module/parameter format.", legacyParamName);
-            m_bWarnedLegacyParam = true;
-        }
-        String moduleName = g_legacyToModuleMap.get(legacyParamName);
-        if (moduleName == null) {
-            logger.warn("Skipping unknown legacy parameter: {}", legacyParamName);
-        } else {
-            setModuleParam(moduleName, legacyParamName, paramValue);
-        }
-    }
-    
     @SuppressWarnings("unchecked")
     private void setModuleParam(String moduleName, String paramName, Object paramValue) {
         Map<String, Object> moduleMap = (Map<String, Object>)m_params.get(moduleName);
@@ -577,23 +456,20 @@ public class ServerParams {
         }
     }
     
-    // Legacy format: "dbhost foo". New module format: "RESTService.dbhost foo" or
-    // "RESTService {restaddr=0.0.0.0,restport=1123}".
+    // Parameter formats supported:
+    //      -RESTService.dbhost foo
+    //      -RESTService {restaddr=0.0.0.0,restport=1123}
     private void setCommandLineParam(String cmdArgName, String cmdArgValue) throws ConfigurationException {
         int dotInx = cmdArgName.indexOf('.');
-        if (dotInx < 0 && isModuleName(cmdArgName)) {
+        if (dotInx < 0) {
             Map<String, Object> paramMap = parseSerialParams(cmdArgValue);
             updateMap(m_params, cmdArgName, paramMap);
         } else {
-            String moduleName = dotInx <= 0 ? null : cmdArgName.substring(0, dotInx);
-            String paramName = dotInx <= 0 ? cmdArgName : cmdArgName.substring(dotInx + 1);
+            String moduleName = cmdArgName.substring(0, dotInx);
+            String paramName = cmdArgName.substring(dotInx + 1);
             String[] values = cmdArgValue.split(",");
             Object paramValue = values.length <= 1 ? cmdArgValue : Arrays.asList(values); 
-            if (moduleName == null) {
-                setLegacyParam(cmdArgName, paramValue);
-            } else {
-                setModuleParam(moduleName, paramName, paramValue);
-            }
+            setModuleParam(moduleName, paramName, paramValue);
         }
     }
     
@@ -626,11 +502,6 @@ public class ServerParams {
                 throw new ConfigurationException("Failed to parse command line arguments", e);
             }
         }
-    }
-    
-    // An outer parameter name is a module name if it starts with an uppercase letter.
-    private boolean isModuleName(String name) {
-        return Character.isUpperCase(name.charAt(0));
     }
     
     // Print all configuration parameters to the log. 
@@ -674,18 +545,5 @@ public class ServerParams {
         }
     }
     
-    // TODO: Delete when ServerConfig is phased out
-    @SuppressWarnings("unchecked")
-    private static void copyParamsToServerConfig() {
-        ServerConfig.createInstance();
-        for (String moduleName : INSTANCE.m_params.keySet()) {
-            Object moduleParams = INSTANCE.m_params.get(moduleName);
-            Map<String, Object> paramMap = (Map<String, Object>)moduleParams;
-            for (String paramName : paramMap.keySet()) {
-                ServerConfig.setParam(paramName, paramMap.get(paramName));
-            }
-        }
-    }
-
 }   // class ServerParams
 
