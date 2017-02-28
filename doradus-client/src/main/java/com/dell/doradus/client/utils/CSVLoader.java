@@ -273,7 +273,7 @@ public class CSVLoader {
         ApplicationDefinition appDef = m_client.getAppDef(m_config.app);
         if (appDef != null) {
             m_logger.info("Deleting existing application: {}", appDef.getAppName());
-            m_client.deleteApplication(appDef.getAppName(), appDef.getKey());
+            m_client.deleteApplication(appDef.getAppName());
         }
     }   // deleteApplication
     

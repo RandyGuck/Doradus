@@ -16,6 +16,8 @@
 
 package com.dell.doradus.common;
 
+import static com.dell.doradus.common.Utils.require;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -33,9 +35,6 @@ import java.util.TreeMap;
 final public class ApplicationDefinition implements JSONable {
     // Application name (case-sensitive):
     private String m_appName;
-    
-    // Optional application key:
-    private String m_key;
     
     // Map of options used by this application. Option names are case-sensitive.
     private final Map<String, String> m_optionMap =
@@ -57,7 +56,7 @@ final public class ApplicationDefinition implements JSONable {
                appName.length() > 0 &&
                Utils.isLetter(appName.charAt(0)) &&
                Utils.allAlphaNumUnderscore(appName);
-    }   // isValidName
+    }
     
     /**
      * Create a new empty ApplicationDefinition object. The object is not valid until
@@ -76,57 +75,38 @@ final public class ApplicationDefinition implements JSONable {
     public void parse(UNode appNode) {
         assert appNode != null;
         
-        // Verify application name and save it.
         setAppName(appNode.getName());
-        
-        // Iterate through the application object's members.
         for (String childName : appNode.getMemberNames()) {
-            // See if we recognize this member.
             UNode childNode = appNode.getMember(childName);
-            
-            // "key"
-            if (childName.equals("key")) {
-                // Must be a value.
-                Utils.require(childNode.isValue(),
-                              "'key' value must be a string: " + childNode);
-                Utils.require(m_key == null,
-                              "'key' can be specified only once");
-                m_key = childNode.getValue();
-                
-            // "options"
-            } else if (childName.equals("options")) {
-                // Each name in the map is an option name.
+            switch (childName) {
+            case "key":
+                // Silently ignore
+                break;
+
+            case "options":
                 for (String optName : childNode.getMemberNames()) {
-                    // Option must be a value.
                     UNode optNode = childNode.getMember(optName);
-                    Utils.require(optNode.isValue(),
-                                  "'option' must be a value: " + optNode);
+                    require(optNode.isValue(), "'option' must be a value: " + optNode);
                     setOption(optNode.getName(), optNode.getValue());
                 }
-                
-            // "tables"
-            } else if (childName.equals("tables")) {
-                // Should be specified only once.
-                Utils.require(m_tableMap.size() == 0,
-                              "'tables' can be specified only once");
-                
-                // Parse the table definitions, adding them to this app def and building
-                // the external link map as we go.
+                break;
+
+            case "tables":
+                require(m_tableMap.size() == 0, "'tables' can be specified only once");
                 for (UNode tableNode : childNode.getMemberList()) {
-                    // This will throw if the table definition has an error.
                     TableDefinition tableDef = new TableDefinition();
                     tableDef.parse(tableNode);
                     addTable(tableDef);
                 }
-                
-            // Unrecognized
-            } else {
-                Utils.require(false, "Unrecognized 'application' element: " + childName);
+                break;
+
+            default:
+                require(false, "Unrecognized 'application' element: " + childName);
             }
         }
         
         verify();
-    }   // parse(UNode)
+    }
 
     ///// Getters
 
@@ -137,17 +117,7 @@ final public class ApplicationDefinition implements JSONable {
      */
     public String getAppName() {
         return m_appName;
-    }   // getName
-    
-    /**
-     * Get this application's key. If no key has been defined for the application, null is
-     * returned.
-     * 
-     * @return This application's key, if any.
-     */
-    public String getKey() {
-        return m_key;
-    }   // getKey
+    }
     
     /**
      * Indicate whether or not this application tables to be implicitly created.
@@ -157,7 +127,7 @@ final public class ApplicationDefinition implements JSONable {
     public boolean allowsAutoTables() {
         String optValue = getOption(CommonDefs.AUTO_TABLES);
         return optValue != null && optValue.equalsIgnoreCase("true");
-    }   // allowsAutoTables
+    }
     
     /**
      * Get the value of the given option such as "AutoTables". Null is returned if the
@@ -168,7 +138,7 @@ final public class ApplicationDefinition implements JSONable {
      */
     public String getOption(String optName) {
         return m_optionMap.get(optName);
-    }   // getOption
+    }
     
     /**
      * Get a Set of all option names currently defined for this application. For
@@ -180,7 +150,7 @@ final public class ApplicationDefinition implements JSONable {
      */
     public Set<String> getOptionNames() {
         return m_optionMap.keySet();
-    }   // getOptionNames
+    }
     
     /**
      * Get the StorageService option for this application. Null is returned if the option
@@ -190,7 +160,7 @@ final public class ApplicationDefinition implements JSONable {
      */
     public String getStorageService() {
         return getOption(CommonDefs.OPT_STORAGE_SERVICE);
-    }   // getStorageService
+    }
     
     /**
      * Return the {@link TableDefinition} for the table with the given name or null if
@@ -202,7 +172,7 @@ final public class ApplicationDefinition implements JSONable {
      */
     public TableDefinition getTableDef(String tableName) {
         return m_tableMap.get(tableName);
-    }   // getTableDef
+    }
     
     /**
      * Get the map of all {@link TableDefinition}s owned by this application indexed by
@@ -212,7 +182,7 @@ final public class ApplicationDefinition implements JSONable {
      */
     public Map<String, TableDefinition> getTableDefinitions() {
         return m_tableMap;
-    }   // getTableDefinitions
+    }
 
     /**
      * Get this application's definition including tables, schedules, etc. as a
@@ -224,13 +194,6 @@ final public class ApplicationDefinition implements JSONable {
         // The root node is always a MAP whose name is the application's name. In case it
         // is serialized to XML, we set this node's tag name to "application".
         UNode appNode = UNode.createMapNode(m_appName, "application");
-        
-        // Add the application's key.
-        if (!Utils.isEmpty(m_key)) {
-            appNode.addValueNode("key", m_key);
-        }
-        
-        // Add options, if any, in a MAP node.
         if (m_optionMap.size() > 0) {
             UNode optsNode = appNode.addMapNode("options");
             for (String optName : m_optionMap.keySet()) {
@@ -238,8 +201,6 @@ final public class ApplicationDefinition implements JSONable {
                 optsNode.addValueNode(optName, m_optionMap.get(optName), "option");
             }
         }
-        
-        // Add tables, if any, in a MAP node.
         if (m_tableMap.size() > 0) {
             UNode tablesNode = appNode.addMapNode("tables");
             for (TableDefinition tableDef : m_tableMap.values()) {
@@ -248,13 +209,13 @@ final public class ApplicationDefinition implements JSONable {
         }
         
         return appNode;
-    }   // toDoc
+    }
     
     // For debugging:
     @Override
     public String toString() {
         return "Application '" + m_appName + "'";
-    }   // toString()
+    }
     
     ///// Setters
     
@@ -266,20 +227,9 @@ final public class ApplicationDefinition implements JSONable {
      * @param appName   Application name for this definition.
      */
     public void setAppName(String appName) {
-        Utils.require(isValidName(appName), "Invalid application name: " + appName);
+        require(isValidName(appName), "Invalid application name: " + appName);
         m_appName = appName;
-    }   // setAppName
-    
-    /**
-     * Set this ApplicationDefinition's key to the given value. This method should only be
-     * used when building-up an application definition: it does not change the key of an
-     * existing application.
-     * 
-     * @param key   Application key for this definition.
-     */
-    public void setKey(String key) {
-        m_key = key;
-    }   // setKey
+    }
     
     /**
      * Set the option with the given name to the given value. If the option value is null,
@@ -294,7 +244,7 @@ final public class ApplicationDefinition implements JSONable {
         } else {
             m_optionMap.put(optName, optValue.trim());
         }
-    }   // setOption
+    }
     
     /**
      * Add the given table definition to this application. This method assumes that the
@@ -308,16 +258,11 @@ final public class ApplicationDefinition implements JSONable {
      * @param  tableDef {@link TableDefinition} of a new table.
      */
     public void addTable(TableDefinition tableDef) {
-        // Ensure this table is unique.
-        if (m_tableMap.containsKey(tableDef.getTableName())) {
-            throw new IllegalArgumentException("Attempt to add duplicate table: " +
-                                               tableDef.getTableName());
-        }
-        
-        // Looks fine. Transfer to us.
+        require(!m_tableMap.containsKey(tableDef.getTableName()),
+                "Attempt to add duplicate table: " + tableDef.getTableName());
         tableDef.setApplication(this);
         m_tableMap.put(tableDef.getTableName(), tableDef);
-    }   // addTable
+    }
 
     /**
      * Remove the given table from this application, presumably because it has been
@@ -330,7 +275,7 @@ final public class ApplicationDefinition implements JSONable {
         assert tableDef.getAppDef() == this;
         
         m_tableMap.remove(tableDef.getTableName());
-    }   // removeTableDef
+    }
 
     ///// Builder interface
     
@@ -368,6 +313,7 @@ final public class ApplicationDefinition implements JSONable {
             m_appDef.verify();
             return m_appDef;
         }
+        
         /**
          * Set the application's name.
          * 
@@ -376,19 +322,6 @@ final public class ApplicationDefinition implements JSONable {
          */
         public Builder withName(String appName) {
             m_appDef.setAppName(appName);
-            return this;
-        }
-        
-        /**
-         * Set the application's key. Note that applications do not require a key: when
-         * specified, a key provides extra protection when the application is deleted or
-         * its schema is changed.
-         * 
-         * @param key       Application key.
-         * @return          This {@link Builder}.
-         */
-        public Builder withKey(String key) {
-            m_appDef.setKey(key);
             return this;
         }
         
@@ -415,7 +348,7 @@ final public class ApplicationDefinition implements JSONable {
             m_appDef.addTable(tableDef);
             return this;
         }
-    }   // class Builder
+    }
     
     ///// Private Methods
     
@@ -456,12 +389,12 @@ final public class ApplicationDefinition implements JSONable {
             inverseLinkDef.setLinkExtent(tableDef.getTableName());
             extentTableDef.addFieldDefinition(inverseLinkDef);
         } else {
-            Utils.require(inverseLinkDef.getType() == linkDef.getType() &&  // both link or xlink
-                          inverseLinkDef.getLinkExtent().equals(tableDef.getTableName()) &&
-                          inverseLinkDef.getLinkInverse().equals(linkDef.getName()),
-                          "Link '%s' in table '%s' conflicts with inverse field '%s' in table '%s'",
-                          linkDef.getName(), tableDef.getTableName(),
-                          inverseLinkDef.getName(), extentTableDef.getTableName());
+            require(inverseLinkDef.getType() == linkDef.getType() &&  // both link or xlink
+                    inverseLinkDef.getLinkExtent().equals(tableDef.getTableName()) &&
+                    inverseLinkDef.getLinkInverse().equals(linkDef.getName()),
+                "Link '%s' in table '%s' conflicts with inverse field '%s' in table '%s'",
+                    linkDef.getName(), tableDef.getTableName(),
+                    inverseLinkDef.getName(), extentTableDef.getTableName());
         }
     }
     
@@ -474,7 +407,6 @@ final public class ApplicationDefinition implements JSONable {
      */
 	public String replaceAliaces(String str) {
 		if(str == null) return str;
-		// for performance
 		if(str.indexOf(CommonDefs.ALIAS_FIRST_CHAR) < 0) return str;
 		
 		PriorityQueue<AliasDefinition> aliasQueue = new PriorityQueue<AliasDefinition>(11, new Comparator<AliasDefinition>() {
@@ -505,4 +437,4 @@ final public class ApplicationDefinition implements JSONable {
 		return toDoc().toJSON();
 	}
 
-}   // class ApplicationDefinition
+}

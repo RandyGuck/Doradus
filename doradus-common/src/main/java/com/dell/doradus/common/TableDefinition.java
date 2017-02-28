@@ -16,6 +16,8 @@
 
 package com.dell.doradus.common;
 
+import static com.dell.doradus.common.Utils.require;
+
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -84,9 +86,9 @@ final public class TableDefinition {
                 }
             }
             return null;
-        }   // fromString
+        }
         
-    }   // enum ShardingGranularity
+    }
     
     /**
      * Create a new {@link TableDefinition} with all null properties.
@@ -102,7 +104,7 @@ final public class TableDefinition {
     public TableDefinition(ApplicationDefinition appDef) {
         assert appDef != null;
         m_appDef = appDef;
-    }   // constructor
+    }
 
     /**
      * Create a new TableDefinition with the given name and belonging to the given
@@ -119,7 +121,7 @@ final public class TableDefinition {
         // Save parameters
         m_appDef = appDef;
         setTableName(tableName);
-    }   // constructor
+    }
     
     /**
      * Parse a table definition rooted at the given UNode. The given node is the table
@@ -132,57 +134,42 @@ final public class TableDefinition {
     public void parse(UNode tableNode) {
         assert tableNode != null;
         
-        // Verify table name and save it.
         setTableName(tableNode.getName());
-        
-        // Examine table node's children.
         for (String childName : tableNode.getMemberNames()) {
             UNode childNode = tableNode.getMember(childName);
             
-            // "fields"
-            if (childName.equals("fields")) {
-                // Process field definitions.
+            switch (childName) {
+            case "fields":
                 for (String fieldName : childNode.getMemberNames()) {
-                    // Create a FieldDefinition and parse the node's value into it.
-                    // This will throw if the definition is invalid.
                     FieldDefinition fieldDef = new FieldDefinition();
                     fieldDef.parse(childNode.getMember(fieldName));
-                    
-                    // Ensure field name is unique and add it to the table's field map.
                     addFieldDefinition(fieldDef);
                 }
+                break;
                 
-            // "options"
-            } else if (childName.equals("options")) {
-                // Examine each option.
+            case "options":
                 for (String optName : childNode.getMemberNames()) {
-                    // Each option must be a simple value and specified only once.
                     UNode optNode = childNode.getMember(optName);
-                    Utils.require(optNode.isValue(),
-                                  "'option' must be a value: " + optNode);
-                    Utils.require(getOption(optName) == null,
-                                  "Option '" + optName + "' can only be specified once");
-                    
-                    // Add option to option map, which performs some immediate validation.
+                    require(optNode.isValue(), "'option' must be a value: " + optNode);
+                    require(getOption(optName) == null, "Option '" + optName + "' can only be specified once");
                     setOption(optName, optNode.getValue());
                 }
-                
-            // "aliases"
-            } else if (childName.equals("aliases")) {
-                // Parse and add each AliasDefinition.
+                break;
+
+            case "aliases":
                 for (String aliasName : childNode.getMemberNames()) {
                     AliasDefinition aliasDef = new AliasDefinition(m_tableName);
                     aliasDef.parse(childNode.getMember(aliasName));
                     addAliasDefinition(aliasDef);
                 }
+                break;
             
-            // Unrecognized
-            } else {
+            default:
                 Utils.require(false, "Unrecognized 'table' element: " + childName);
             }
         }
         verify();
-    }   // parse
+    }
 
     /**
      * Indicate if the given string is a valid table name. Table names must begin with a
@@ -197,7 +184,7 @@ final public class TableDefinition {
                tableName.length() > 0 &&
                Utils.isLetter(tableName.charAt(0)) &&
                Utils.allAlphaNumUnderscore(tableName);
-    }   // isValidTableName
+    }
 
     ///// Getters
 
@@ -250,7 +237,7 @@ final public class TableDefinition {
         }
         assert computeShardNumber(result) == shardNumber;
         return result;
-    }   // computeShardStart
+    }
     
     /**
      * Compute the shard number of an object belong to this table with the given
@@ -311,10 +298,10 @@ final public class TableDefinition {
             break;
             
         default:
-            Utils.require(false, "Unknown sharding-granularity: " + m_shardingGranularity);
+            require(false, "Unknown sharding-granularity: " + m_shardingGranularity);
         }
         return shardNumber;
-    }   // computeShardNumber
+    }
     
     /**
      * Get the {@link ApplicationDefinition} to which this table definition applies. Note
@@ -324,9 +311,9 @@ final public class TableDefinition {
      * @return {@link ApplicationDefinition} to which this table definition applies.
      */
     public ApplicationDefinition getAppDef() {
-        Utils.require(m_appDef != null, "Table has not been assigned to an application");
+        require(m_appDef != null, "Table has not been assigned to an application");
         return m_appDef;
-    }   // getAppDef
+    }
 
     /**
      * Get the name of the table represented by this table definition. This is the logical
@@ -338,7 +325,7 @@ final public class TableDefinition {
      */
     public String getTableName() {
         return m_tableName;
-    }   // getTableName
+    }
     
     /**
      * Get the field definitions for this table as an Collection&lt;{@link FieldDefinition}&gt;
@@ -355,7 +342,7 @@ final public class TableDefinition {
      */
     public Collection<FieldDefinition> getFieldDefinitions() {
         return m_fieldDefMap.values();
-    }   // getFieldDefinitions
+    }
 
     /**
      * Get the {@link FieldDefinition} for the field with the given name, used by this
@@ -367,7 +354,7 @@ final public class TableDefinition {
      */
     public FieldDefinition getFieldDef(String fieldName) {
         return m_fieldDefMap.get(fieldName);
-    }   // getFieldDef
+    }
 
     /**
      * Return the value of the option with the given name or null if there is no such
@@ -379,7 +366,7 @@ final public class TableDefinition {
      */
     public String getOption(String optionName) {
         return m_optionMap.get(optionName.toLowerCase());
-    }   // getOption
+    }
     
     /**
      * Get a Set of all option names currently defined for this table. For each
@@ -391,7 +378,7 @@ final public class TableDefinition {
      */
     public Set<String> getOptionNames() {
         return m_optionMap.keySet();
-    }   // getOptionNames
+    }
     
     /**
      * Get the {@link FieldDefinition} of the sharding-field for this table. If this table
@@ -410,7 +397,7 @@ final public class TableDefinition {
             return null;
         }
         return getFieldDef(shardingFieldNme);   // may return null
-    }   // getShardingField
+    }
 
     /**
      * Determine the shard number of the given object for this table. If this table is
@@ -439,7 +426,7 @@ final public class TableDefinition {
         }
         Date shardingFieldValue = Utils.dateFromString(value);
         return computeShardNumber(shardingFieldValue);
-    }   // getShardNumber
+    }
 
     /**
      * Get the alias definitions owned by this table as an Iterable object. NOTE: The
@@ -449,7 +436,7 @@ final public class TableDefinition {
      */
     public Iterable<AliasDefinition> getAliasDefinitions() {
         return m_aliasDefMap.values();
-    }   // getAliasDefinitions
+    }
     
     /**
      * Get the {@link AliasDefinition} belonging to this table with the given name, or
@@ -460,7 +447,7 @@ final public class TableDefinition {
      */
     public AliasDefinition getAliasDef(String aliasName) {
         return m_aliasDefMap.get(aliasName);
-    }   // getAliasDef
+    }
     
     /**
      * Return true if the given field name is an MV scalar field. Since scalar fields
@@ -472,7 +459,7 @@ final public class TableDefinition {
     public boolean isCollection(String fieldName) {
         FieldDefinition fieldDef = m_fieldDefMap.get(fieldName);
         return fieldDef != null && fieldDef.isScalarField() && fieldDef.isCollection();
-    }   // isCollection
+    }
     
     /**
      * Return true if this table definition possesses a FieldDefinition with the given name
@@ -484,7 +471,7 @@ final public class TableDefinition {
     public boolean isLinkField(String fieldName) {
         FieldDefinition fieldDef = m_fieldDefMap.get(fieldName);
         return fieldDef != null && fieldDef.isLinkField();
-    }   // isLinkField
+    }
 
     /**
      * Return true if this table definition possesses a FieldDefinition with the given name
@@ -497,7 +484,7 @@ final public class TableDefinition {
     public boolean isScalarField(String fieldName) {
         FieldDefinition fieldDef = m_fieldDefMap.get(fieldName);
         return fieldDef == null || fieldDef.isScalarField();
-    }   // isScalarField
+    }
     
     /**
      * Return true if this table is sharded, meaning the sharding-field option has been
@@ -508,7 +495,7 @@ final public class TableDefinition {
      */
     public boolean isSharded() {
         return getOption(CommonDefs.OPT_SHARDING_FIELD) != null;
-    }   // isSharded
+    }
     
     /**
      * Serialize this table definition into a {@link UNode} tree and return the root node.
@@ -553,13 +540,13 @@ final public class TableDefinition {
         }
         
         return tableNode;
-    }   // toDoc
+    }
 
     // Return "Table 'foo'"
     @Override
     public String toString() {
         return "Table '" + m_tableName + "'";
-    }   // toString
+    }
     
     ///// Setters
     
@@ -572,7 +559,7 @@ final public class TableDefinition {
     public void setApplication(ApplicationDefinition appDef) {
         assert appDef != null;
         m_appDef = appDef;
-    }   // setApplication
+    }
     
     /**
      * Set this table's name to the given value. If the name is not a valid table name,
@@ -586,7 +573,7 @@ final public class TableDefinition {
             throw new IllegalArgumentException("Invalid table name: " + tableName);
         }
         m_tableName = tableName;
-    }   // setTableName
+    }
     
     /**
      * Set the option with the given name to the given value. This method does not
@@ -598,9 +585,9 @@ final public class TableDefinition {
      */
     public void setOption(String optionName, String optionValue) {
         // Ensure option value is not empty and trim excess whitespace.
-        Utils.require(optionName != null, "optionName");
-        Utils.require(optionValue != null && optionValue.trim().length() > 0,
-                      "Value for option '" + optionName + "' can not be empty");
+        require(optionName != null, "optionName");
+        require(optionValue != null && optionValue.trim().length() > 0,
+            "Value for option '" + optionName + "' can not be empty");
         optionValue = optionValue.trim();
         m_optionMap.put(optionName.toLowerCase(), optionValue);
         
@@ -608,15 +595,15 @@ final public class TableDefinition {
         // local members when the table's definition is parsed.
         if (optionName.equalsIgnoreCase(CommonDefs.OPT_SHARDING_GRANULARITY)) {
             m_shardingGranularity = ShardingGranularity.fromString(optionValue);
-            Utils.require(m_shardingGranularity != null,
-                          "Unrecognized 'sharding-granularity' value: " + optionValue);
+            require(m_shardingGranularity != null,
+                "Unrecognized 'sharding-granularity' value: " + optionValue);
         } else if (optionName.equalsIgnoreCase(CommonDefs.OPT_SHARDING_START)) {
-            Utils.require(isValidShardDate(optionValue),
-                          "'sharding-start' must be YYYY-MM-DD: " + optionValue);
+            require(isValidShardDate(optionValue),
+                "'sharding-start' must be YYYY-MM-DD: " + optionValue);
             m_shardingStartDate = new GregorianCalendar(Utils.UTC_TIMEZONE);
             m_shardingStartDate.setTime(Utils.dateFromString(optionValue));
         }
-    }   // setOption
+    }
 
     /**
      * Add the given {@link FieldDefinition} object to this table's list of fields. This
@@ -627,9 +614,9 @@ final public class TableDefinition {
      */
     public void addFieldDefinition(FieldDefinition fieldDef) {
         // Assure field name is unique and add the definition to the map.
-        Utils.require(!Utils.isEmpty(fieldDef.getName()), "Field name is required");
-        Utils.require(!m_fieldDefMap.containsKey(fieldDef.getName()),
-                      "Field names must be unique: " + fieldDef.getName());
+        require(!Utils.isEmpty(fieldDef.getName()), "Field name is required");
+        require(!m_fieldDefMap.containsKey(fieldDef.getName()),
+            "Field names must be unique: " + fieldDef.getName());
         m_fieldDefMap.put(fieldDef.getName(), fieldDef);
         fieldDef.setTableDefinition(this);
 
@@ -639,7 +626,7 @@ final public class TableDefinition {
                 addFieldDefinition(nestedFieldDef);
             }
         }
-    }   // addFieldDefinition
+    }
 
     /**
      * Get the TableDefinition of the "extent" table for the given link field.
@@ -655,7 +642,7 @@ final public class TableDefinition {
         TableDefinition tableDef = m_appDef.getTableDef(linkDef.getLinkExtent());
         assert tableDef != null;
         return tableDef;
-    }   // getLinkExtentTableDef
+    }
     
     /**
      * Examine the given column name and, if it represents an MV link value, add it to the
@@ -694,7 +681,7 @@ final public class TableDefinition {
         }
         valueSet.add(linkValue);
         return true;
-    }   // extractLinkValue
+    }
     
     ///// Builder interface
     
@@ -767,7 +754,7 @@ final public class TableDefinition {
             return this;
         }
         
-    }   // class Builder
+    }
     
     ///// Private methods
     
@@ -779,7 +766,7 @@ final public class TableDefinition {
         assert aliasDef.getTableName().equals(this.getTableName());
         
         m_aliasDefMap.put(aliasDef.getName(), aliasDef);
-    }   // addAliasDefinition
+    }
 
     // Verify that the given shard-starting date is in the format YYYY-MM-DD. If the format
     // is bad, just return false.
@@ -791,7 +778,7 @@ final public class TableDefinition {
         } catch (IllegalArgumentException ex) {
             return false;
         }
-    }   // isValidShardDate
+    }
 
     // Verify that the table is complete. Currently, only xlinks require checking.
     private void verify() {
@@ -807,14 +794,14 @@ final public class TableDefinition {
         String juncField = xlinkDef.getXLinkJunction();
         if (!"_ID".equals(juncField)) {
             FieldDefinition juncFieldDef = m_fieldDefMap.get(juncField);
-            Utils.require(juncFieldDef != null,
-                          String.format("Junction field for xlink '%s' has not been defined: %s",
-                                        xlinkDef.getName(), xlinkDef.getXLinkJunction()));
-            Utils.require(juncFieldDef.getType() == FieldType.TEXT,
-                          String.format("Junction field for xlink '%s' must be a text field: ",
-                                        xlinkDef.getName(), xlinkDef.getXLinkJunction()));
+            require(juncFieldDef != null,
+                String.format("Junction field for xlink '%s' has not been defined: %s",
+                    xlinkDef.getName(), xlinkDef.getXLinkJunction()));
+            require(juncFieldDef.getType() == FieldType.TEXT,
+                String.format("Junction field for xlink '%s' must be a text field: ",
+                    xlinkDef.getName(), xlinkDef.getXLinkJunction()));
         }
-    }   // verifyJunctionField
+    }
 
     /**
      * Replaces of all occurences of aliases defined with this table, by their expressions.
@@ -827,4 +814,4 @@ final public class TableDefinition {
 		return getAppDef().replaceAliaces(str);
 	}
 
-}   // class TableDefinition
+}

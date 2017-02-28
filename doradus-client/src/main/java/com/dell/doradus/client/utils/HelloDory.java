@@ -112,7 +112,6 @@ public class HelloDory {
     private void createApplication(DoradusClient client) {
         ApplicationDefinition appDef = ApplicationDefinition.builder()
             .withName("HelloSpider")
-            .withKey("Arachnid")
             .withOption("StorageService", "SpiderService")
             .withTable(TableDefinition.builder()
                 .withName("Movies")

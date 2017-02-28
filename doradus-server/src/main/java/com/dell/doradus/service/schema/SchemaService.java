@@ -66,8 +66,7 @@ public class SchemaService extends Service {
         ListApplicationCmd.class,
         DefineApplicationCmd.class,
         ModifyApplicationCmd.class,
-        DeleteApplicationCmd.class,
-        DeleteApplicationKeyCmd.class
+        DeleteApplicationCmd.class
     );
     
     //----- Service methods
@@ -80,25 +79,25 @@ public class SchemaService extends Service {
      */ 
     public static SchemaService instance() {
         return INSTANCE;
-    } // instance
+    }
 
     // Called once before startService. 
     @Override
     public void initService() {
         RESTService.instance().registerCommands(CMD_CLASSES);
-    }   // initService
+    }
 
     // Wait for the DB service to be up and check application schemas.
     @Override
     public void startService() {
         DBService.instance().waitForFullService();
         DBService.instance().createStoreIfAbsent(APPS_STORE_NAME, false);
-    }   // startService
+    }
 
     // Currently, we have nothing special to do to "stop".
     @Override
     public void stopService() {
-    }   // stopService
+    }
 
     //----- Public SchemaService methods
 
@@ -115,11 +114,11 @@ public class SchemaService extends Service {
      */
     public void defineApplication(ApplicationDefinition appDef) {
         checkServiceState();
-        ApplicationDefinition currAppDef = checkApplicationKey(appDef);
+        ApplicationDefinition currAppDef = findExistingApplication(appDef);
         StorageService storageService = verifyStorageServiceOption(currAppDef, appDef);
         storageService.validateSchema(appDef);
         initializeApplication(currAppDef, appDef);
-    }   // defineApplication
+    }
 
     /**
      * Return the {@link ApplicationDefinition} for all applications.
@@ -129,7 +128,7 @@ public class SchemaService extends Service {
     public Collection<ApplicationDefinition> getAllApplications() {
         checkServiceState();
         return findAllApplications();
-    }   // getAllApplications
+    }
     
     /**
      * Return the {@link ApplicationDefinition} for the application. Null is returned if
@@ -141,7 +140,7 @@ public class SchemaService extends Service {
     public ApplicationDefinition getApplication(String appName) {
         checkServiceState();
         return getApplicationDefinition(appName);
-    }   // getApplication
+    }
 
     /**
      * Examine the given application's StorageService option and return the corresponding
@@ -157,7 +156,7 @@ public class SchemaService extends Service {
         StorageService storageService = DoradusServer.instance().findStorageService(ssName);
         Utils.require(storageService != null, "StorageService is unknown or hasn't been initialized: " + ssName);
         return storageService;
-    }   // getStorageService
+    }
 
     /**
      * Get the given application's StorageService option. If none is found, assign and
@@ -175,12 +174,11 @@ public class SchemaService extends Service {
             appDef.setOption(CommonDefs.OPT_STORAGE_SERVICE, ssName);
         }
         return ssName;
-    }   // getStorageServiceOption
+    }
 
     /**
      * Delete the given application, including all of its data. If the given application
-     * doesn't exist, the call is a no-op. WARNING: This method deletes an application
-     * regardless of whether it has a key defined.
+     * doesn't exist, the call is a no-op.
      * 
      * @param appName   Name of application to delete.
      */
@@ -190,43 +188,17 @@ public class SchemaService extends Service {
         if (appDef == null) {
             return; 
         }
-        deleteApplication(appName, appDef.getKey());
-    }   // deleteApplication
-    
-    /**
-     * Delete the given application, including all of its data. If the given application
-     * doesn't exist, the call is a no-op. If the application exists, the given key must
-     * match the current key, if one is defined, or be null/empty if no key is defined.
-     * 
-     * @param appName   Name of application to delete.
-     * @param key       Application key of existing application, if any.
-     */
-    public void deleteApplication(String appName, String key) {
-        checkServiceState();
-        ApplicationDefinition appDef = getApplication(appName);
-        if (appDef == null) {
-            return; 
-        }
-        deleteApplication(appDef, key);
-    }   // deleteApplication
+        deleteApplication(appDef);
+    }
     
     /**
      * Delete the application with the given definition, including all of its data. If the
-     * given application doesn't exist, the call is a no-op. If the application exists,
-     * the given key must match the current key, if one is defined, or be null/empty if no
-     * key is defined.
+     * given application doesn't exist, the call is a no-op.
      * 
      * @param appDef    {@link ApplicationDefinition} of application to delete.
-     * @param key       Application key of existing application, if any.
      */
-    public void deleteApplication(ApplicationDefinition appDef, String key) {
+    public void deleteApplication(ApplicationDefinition appDef) {
         checkServiceState();
-        String appKey = appDef.getKey();
-        if (Utils.isEmpty(appKey)) {
-            Utils.require(Utils.isEmpty(key), "Application key does not match: %s", key);
-        } else {
-            Utils.require(appKey.equals(key), "Application key does not match: %s", key);
-        }
         
         // Delete storage service-specific data first.
         m_logger.info("Deleting application: {}", appDef.getAppName());
@@ -234,7 +206,7 @@ public class SchemaService extends Service {
         storageService.deleteApplication(appDef);
         TaskManagerService.instance().deleteApplicationTasks(appDef);
         deleteAppProperties(appDef);
-    }   // deleteApplication
+    }
     
     //----- Private methods
 
@@ -246,13 +218,13 @@ public class SchemaService extends Service {
         DBTransaction dbTran = DBService.instance().startTransaction();
         dbTran.deleteRow(SchemaService.APPS_STORE_NAME, appDef.getAppName());
         DBService.instance().commit(dbTran);
-    }   // deleteAppProperties
+    }
     
     // Initialize storage and store the given schema for the given new or updated application.
     private void initializeApplication(ApplicationDefinition currAppDef, ApplicationDefinition appDef) {
         getStorageService(appDef).initializeApplication(currAppDef, appDef);
         storeApplicationSchema(appDef);
-    }   // initializeApplication
+    }
 
     // Store the application row with schema, version, and format.
     private void storeApplicationSchema(ApplicationDefinition appDef) {
@@ -262,21 +234,18 @@ public class SchemaService extends Service {
         dbTran.addColumn(SchemaService.APPS_STORE_NAME, appName, COLNAME_APP_SCHEMA_FORMAT, ContentType.APPLICATION_JSON.toString());
         dbTran.addColumn(SchemaService.APPS_STORE_NAME, appName, COLNAME_APP_SCHEMA_VERSION, Integer.toString(CURRENT_SCHEMA_LEVEL));
         DBService.instance().commit(dbTran);
-    }   // storeApplicationSchema
+    }
     
-    // Verify key match of an existing application, if any, and return it's definition. 
-    private ApplicationDefinition checkApplicationKey(ApplicationDefinition appDef) {
+    // See if the same application name exists and return it's definition. 
+    private ApplicationDefinition findExistingApplication(ApplicationDefinition appDef) {
         ApplicationDefinition currAppDef = getApplication(appDef.getAppName());
         if (currAppDef == null) {
             m_logger.info("Defining application: {}", appDef.getAppName());
         } else {
             m_logger.info("Updating application: {}", appDef.getAppName());
-            String appKey = currAppDef.getKey();
-            Utils.require(Utils.isEmpty(appKey) || appKey.equals(appDef.getKey()),
-                          "Application key cannot be changed: %s", appDef.getKey());
         }
         return currAppDef;
-    }   // checkApplicationKey
+    }
     
     // Verify the given application's StorageService option and, if this is a schema
     // change, ensure it hasn't changed.  Return the application's StorageService object.
@@ -292,7 +261,7 @@ public class SchemaService extends Service {
             Utils.require(currSSName.equals(ssName), "'StorageService' cannot be changed for application: %s", appDef.getAppName());
         }
         return storageService;
-    }   // verifyStorageServiceOption
+    }
 
     private Map<String, String> getColumnMap(Iterator<DColumn> colIter) {
         Map<String, String> colMap = new HashMap<>();
@@ -301,7 +270,7 @@ public class SchemaService extends Service {
             colMap.put(col.getName(), col.getValue());
         }
         return colMap;
-    }   // getColumnMap
+    }
     
     // Parse the application schema from the given application row.
     private ApplicationDefinition loadAppRow(Map<String, String> colMap) {
@@ -325,7 +294,7 @@ public class SchemaService extends Service {
             return null;
         }
         return appDef;
-    }   // loadAppRow
+    }
 
     // Get the given application's application.
     private ApplicationDefinition getApplicationDefinition(String appName) {
@@ -335,7 +304,7 @@ public class SchemaService extends Service {
             return null;
         }
         return loadAppRow(getColumnMap(colIter));
-    }   // getApplicationDefinition
+    }
 
     // Get all application definitions.
     private Collection<ApplicationDefinition> findAllApplications() {
@@ -350,6 +319,6 @@ public class SchemaService extends Service {
             }
         }
         return result;
-    }   // findAllApplications
+    }
 
 }   // class SchemaService

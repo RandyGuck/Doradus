@@ -40,7 +40,7 @@ public class DeleteApplicationCmd extends RESTCallback {
         if (appDef == null) {
             throw new NotFoundException("Unknown application: " + appName);
         }
-        SchemaService.instance().deleteApplication(appDef, null);
+        SchemaService.instance().deleteApplication(appDef);
         return new RESTResponse(HttpCode.OK);
     }   // invoke
 
